@@ -1,11 +1,11 @@
-<h2></a>Overview</h2>
+<h2>Overview</h2>
 
 <p>&nbsp;The project provides REST support for the GigaSpace Space API using HTTP methods in the following manner:</p>
 <ol>
   <li>GET - can be used to perform a readByID or a readMultiple action by a space query.</li>
-	<li>POST - can be used to perform a write / writeMultiple action.
-<div class='panelMacro'><table class='warningMacro'><colgroup><col width='24'><col></colgroup><tr><td valign='top'><img src="/images/icons/emoticons/forbidden.gif" width="16" height="16" align="absmiddle" alt="" border="0"></td><td>POST is mapped to a WriteOnly action.<br/>
-An exception will be thrown when trying to write an object which already exists in space.</td></tr></table></div></li>
+	<li>POST - can be used to perform a write / writeMultiple action.<br/>
+		<b>Notice:</b> POST is mapped to a WriteOnly action.<br/>
+		An exception will be thrown when trying to write an object which already exists in space.</li>
 	<li>PUT - can be used to perform a single or multiple write or update actions.</li>
 	<li>DELETE - can be used to perform take / takeMultiple actions either by ID or by a space query.</li>
 </ol>
