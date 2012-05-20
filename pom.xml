@@ -34,17 +34,17 @@
 		<dependency>
 			<groupId>org.springframework</groupId>
 			<artifactId>spring-webmvc</artifactId>
-			<version>3.0.5.RELEASE</version>
+			<version>3.1.1.RELEASE</version>
 		</dependency>
 		<dependency>
 			<groupId>org.springframework</groupId>
 			<artifactId>spring-tx</artifactId>
-			<version>3.0.5.RELEASE</version>
+			<version>3.1.1.RELEASE</version>
 		</dependency>
 		<dependency>
 			<groupId>org.springframework</groupId>
 			<artifactId>spring-orm</artifactId>
-			<version>3.0.5.RELEASE</version>
+			<version>3.1.1.RELEASE</version>
 		</dependency>
 		<dependency>
 			<groupId>aopalliance</groupId>
@@ -64,7 +64,7 @@
 		<dependency>
 			<groupId>com.gigaspaces</groupId>
 			<artifactId>gs-openspaces</artifactId>
-			<version>8.0.3</version>
+			<version>9.0.0</version>
 		</dependency>
 		<dependency>
 			<groupId>org.codehaus.jackson</groupId>
