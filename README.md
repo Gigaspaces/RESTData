@@ -1,3 +1,6 @@
+[![Build Status](https://secure.travis-ci.org/OpenSpaces/RESTData.png)](http://travis-ci.org/OpenSpaces/RESTData)
+
+
 <h2>Overview</h2>
 
 <p>&nbsp;The project provides REST support for the GigaSpace Space API using HTTP methods in the following manner:</p>
