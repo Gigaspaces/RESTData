@@ -38,12 +38,12 @@ public class SpaceAPIControllerTest {
         spaceAPIController = new SpaceAPIController();
         spaceAPIController.initSpaceProxy("/./" + SPACENAME);
         gigaSpace = new GigaSpaceConfigurer(new UrlSpaceConfigurer("jini://*/*/" + SPACENAME)).gigaSpace();
+        registerProductType(gigaSpace);
     }
-
+    
     @Before
     public void beforeTest(){
-        gigaSpace.clean();
-        registerProductType(gigaSpace);
+        gigaSpace.clear(null);
     }
 
     @Test
@@ -381,8 +381,8 @@ public class SpaceAPIControllerTest {
         gigaSpace.write(pojo1);
 
         Map<String, Object> nestedProps = new HashMap<String, Object>();
-        nestedProps.put("id", "22");
-        nestedProps.put("val", "123");
+        nestedProps.put("id", 22);
+        nestedProps.put("val", 123L);
 
         Map<String, Object> properties1 = new HashMap<String, Object>();
         properties1.put("id", "2");
