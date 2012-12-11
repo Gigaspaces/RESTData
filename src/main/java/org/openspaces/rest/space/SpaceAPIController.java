@@ -29,7 +29,7 @@ import org.openspaces.core.GigaSpace;
 import org.openspaces.core.GigaSpaceConfigurer;
 import org.openspaces.core.space.UrlSpaceConfigurer;
 import org.openspaces.rest.exceptions.ObjectNotFoundException;
-import org.openspaces.rest.exceptions.TypeDescriptorNotFoundException;
+import org.openspaces.rest.exceptions.TypeNotFoundException;
 import org.openspaces.rest.utils.ControllerUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataAccessException;
@@ -120,7 +120,13 @@ public class SpaceAPIController {
 	    
 	    SQLQuery<SpaceDocument> sqlQuery = new SQLQuery<SpaceDocument>(type, query, QueryResultType.DOCUMENT);
 	    int maxSize = (size==null ? maxReturnValues : size.intValue());
-        SpaceDocument[] docs = gigaSpace.readMultiple(sqlQuery, maxSize);
+        SpaceDocument[] docs;
+        try {
+            docs = gigaSpace.readMultiple(sqlQuery, maxSize);
+        } catch (DataAccessException e) {
+            throw translateDataAccessException(e, type);
+        }
+        
         Map<String, Object>[] result;
         if (docs == null || docs.length == 0){
             throw new ObjectNotFoundException("no objects matched the criteria");
@@ -129,7 +135,7 @@ public class SpaceAPIController {
         return result;
 	}
 	
-	/**
+    /**
 	 * REST GET by ID request handler
 	 * 
 	 * @param type
@@ -170,8 +176,7 @@ public class SpaceAPIController {
     private Object getTypeBasedIdObject(String type, String id) {
         SpaceTypeDescriptor typeDescriptor = gigaSpace.getTypeManager().getTypeDescriptor(type);
 	    if (typeDescriptor == null){
-	        throw new DataAccessException("SpaceTypeDescriptor does not exist, cant read type") {
-            };
+	        throw new TypeNotFoundException(type);
 	    }
 	    
 	    //Investigate id type
@@ -180,8 +185,7 @@ public class SpaceAPIController {
 	    try {
             return ControllerUtils.convertPropertyToPrimitiveType(id, idProperty.getType(), idPropertyName);
         } catch (UnknownTypeException e) {
-            throw new DataAccessException("Only primitive SpaceId is currently supported by RestData") {
-            };
+            throw new DataAccessException("Only primitive SpaceId is currently supported by RestData") {};
         }
     }
 
@@ -200,7 +204,8 @@ public class SpaceAPIController {
 	    Object typedBasedId = getTypeBasedIdObject(type, id);
 	    if(logger.isLoggable(Level.FINE))
 	        logger.fine("creating takebyid query with type: " + type + " and id: " + id);
-	    SpaceDocument doc = gigaSpace.takeById(new IdQuery<SpaceDocument>(type, typedBasedId, QueryResultType.DOCUMENT));
+	    SpaceDocument doc;
+        doc = gigaSpace.takeById(new IdQuery<SpaceDocument>(type, typedBasedId, QueryResultType.DOCUMENT));
 	    if (doc == null){
 	        throw new ObjectNotFoundException("no object matched the criteria");
 	    }
@@ -223,7 +228,12 @@ public class SpaceAPIController {
 	    
 	    SQLQuery<SpaceDocument> sqlQuery = new SQLQuery<SpaceDocument>(type, query, QueryResultType.DOCUMENT);
 	    int maxSize = (size==null ? maxReturnValues : size.intValue());
-	    SpaceDocument[] docs = gigaSpace.takeMultiple(sqlQuery, maxSize);
+	    SpaceDocument[] docs;
+        try {
+            docs = gigaSpace.takeMultiple(sqlQuery, maxSize);
+        } catch (DataAccessException e) {
+            throw translateDataAccessException(e, type);
+        }
 	    return ControllerUtils.createPropertiesResult(docs);
 	}
 	
@@ -246,11 +256,11 @@ public class SpaceAPIController {
 	 * @param type
 	 * @param reader
 	 * @return
-	 * @throws TypeDescriptorNotFoundException 
+	 * @throws TypeNotFoundException 
 	 */
 	@RequestMapping(value = "/{type}", method = RequestMethod.POST)
 	public @ResponseBody String post(@PathVariable String type, BufferedReader reader) 
-	        throws TypeDescriptorNotFoundException{
+	        throws TypeNotFoundException{
 	    if(logger.isLoggable(Level.FINE))
 	        logger.fine("performing post, type: " + type);
 	    
@@ -264,11 +274,11 @@ public class SpaceAPIController {
 	 * @param type
 	 * @param reader
 	 * @return
-	 * @throws TypeDescriptorNotFoundException 
+	 * @throws TypeNotFoundException 
 	 */
 	@RequestMapping(value = "/{type}", method = RequestMethod.PUT)
 	public @ResponseBody String put(@PathVariable String type, BufferedReader reader) 
-	        throws TypeDescriptorNotFoundException{
+	        throws TypeNotFoundException{
 	    if(logger.isLoggable(Level.FINE))
 	        logger.fine("performing put, type: " + type);
 	    
@@ -276,15 +286,23 @@ public class SpaceAPIController {
 		return "success";
 	}
 
+	private RuntimeException translateDataAccessException(DataAccessException e, String type) {
+	    if (gigaSpace.getTypeManager().getTypeDescriptor(type) == null) {
+	        return new TypeNotFoundException(type);
+	    } else {
+	        return e;
+	    }
+    }
+	
 	 /**
-     * TypeDescriptorNotFoundException Handler, returns an error response to the client
+     * TypeNotFoundException Handler, returns an error response to the client
      * 
      * @param writer
      * @throws IOException
      */
-    @ExceptionHandler(TypeDescriptorNotFoundException.class)
+    @ExceptionHandler(TypeNotFoundException.class)
     @ResponseStatus(value=HttpStatus.NOT_FOUND)
-    public void resolveTypeDescriptorNotFoundException(TypeDescriptorNotFoundException e, Writer writer) throws IOException {
+    public void resolveTypeDescriptorNotFoundException(TypeNotFoundException e, Writer writer) throws IOException {
         if(logger.isLoggable(Level.FINE))
             logger.fine("type descriptor for typeName: " + e.getTypeName() + " not found, returning error response");
         
@@ -329,10 +347,10 @@ public class SpaceAPIController {
 	 * @param type
 	 * @param reader
 	 * @param updateModifiers
-	 * @throws TypeDescriptorNotFoundException 
+	 * @throws TypeNotFoundException 
 	 */
 	private void createAndWriteDocuments(String type, BufferedReader reader, int updateModifiers) 
-	        throws TypeDescriptorNotFoundException{
+	        throws TypeNotFoundException{
 		logger.info("creating space Documents from payload");
 	    SpaceDocument[] spaceDocuments = ControllerUtils.createSpaceDocuments(type, reader, gigaSpace);
 		if (spaceDocuments != null && spaceDocuments.length > 0){

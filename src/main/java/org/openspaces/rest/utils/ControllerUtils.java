@@ -25,7 +25,7 @@ import java.util.logging.Logger;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.type.TypeReference;
 import org.openspaces.core.GigaSpace;
-import org.openspaces.rest.exceptions.TypeDescriptorNotFoundException;
+import org.openspaces.rest.exceptions.TypeNotFoundException;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 
 import com.gigaspaces.document.SpaceDocument;
@@ -45,7 +45,7 @@ public class ControllerUtils {
 	private static final ObjectMapper mapper = new ObjectMapper();
 	
 	public static SpaceDocument[] createSpaceDocuments(String type, BufferedReader reader, GigaSpace gigaSpace) 
-	        throws TypeDescriptorNotFoundException {
+	        throws TypeNotFoundException {
         HashMap<String, Object>[] propertyMapArr;
         try{
             //get payload
@@ -96,12 +96,12 @@ public class ControllerUtils {
 	 * @param gigaSpace
 	 * @return
 	 * @throws UnknownTypeException
-	 * @throws TypeDescriptorNotFoundException 
+	 * @throws TypeNotFoundException 
 	 */
-	private static Map<String, Object> getTypeBasedProperties(String documentType, Map<String, Object> propertyMap, GigaSpace gigaSpace) throws UnknownTypeException, TypeDescriptorNotFoundException {
+	private static Map<String, Object> getTypeBasedProperties(String documentType, Map<String, Object> propertyMap, GigaSpace gigaSpace) throws UnknownTypeException, TypeNotFoundException {
 		SpaceTypeDescriptor spaceTypeDescriptor = gigaSpace.getTypeManager().getTypeDescriptor(documentType);
 		if (spaceTypeDescriptor == null){
-		    throw new TypeDescriptorNotFoundException(documentType);
+		    throw new TypeNotFoundException(documentType);
 		}else{
 		    Map<String, Object> buildTypeBasedProperties = buildTypeBasedProperties(propertyMap, spaceTypeDescriptor, gigaSpace);
 		    return buildTypeBasedProperties;
@@ -112,7 +112,7 @@ public class ControllerUtils {
     @SuppressWarnings("unchecked")
     private static Map<String, Object> buildTypeBasedProperties(
             Map<String, Object> propertyMap,
-            SpaceTypeDescriptor spaceTypeDescriptor, GigaSpace gigaSpace) throws UnknownTypeException, TypeDescriptorNotFoundException {
+            SpaceTypeDescriptor spaceTypeDescriptor, GigaSpace gigaSpace) throws UnknownTypeException, TypeNotFoundException {
         HashMap<String, Object> newPropertyMap = new HashMap<String, Object>();
         for(Entry<String, Object> entry : propertyMap.entrySet()){
             String propKey = entry.getKey();

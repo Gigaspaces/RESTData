@@ -5,13 +5,13 @@ package org.openspaces.rest.exceptions;
  * on a type that is not registered in space
  * @author Dan Kilman
  */
-public class TypeDescriptorNotFoundException
-        extends Exception
+public class TypeNotFoundException
+        extends RuntimeException
 {
     private static final long serialVersionUID = 1L;
     private final String typeName;
 
-    public TypeDescriptorNotFoundException(String typeName) {
+    public TypeNotFoundException(String typeName) {
         this.typeName = typeName;
     }
 
