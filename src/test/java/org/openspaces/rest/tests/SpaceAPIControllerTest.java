@@ -14,6 +14,7 @@ import org.openspaces.core.GigaSpace;
 import org.openspaces.core.GigaSpaceConfigurer;
 import org.openspaces.core.space.UrlSpaceConfigurer;
 import org.openspaces.rest.exceptions.ObjectNotFoundException;
+import org.openspaces.rest.exceptions.TypeDescriptorNotFoundException;
 import org.openspaces.rest.space.SpaceAPIController;
 import org.springframework.web.HttpMediaTypeNotAcceptableException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
@@ -306,7 +307,7 @@ public class SpaceAPIControllerTest {
     }
 
     @Test
-    public void testPut() throws MissingServletRequestParameterException, HttpMediaTypeNotAcceptableException, NoSuchRequestHandlingMethodException{
+    public void testPut() throws MissingServletRequestParameterException, HttpMediaTypeNotAcceptableException, NoSuchRequestHandlingMethodException, TypeDescriptorNotFoundException{
         Map<String, Object> properties1 = new HashMap<String, Object>();
         properties1.put("CatalogNumber", "doc1");
         properties1.put("Category", "Hardware");
@@ -368,7 +369,7 @@ public class SpaceAPIControllerTest {
     }
 
     @Test
-    public void testPojoDocInterop() throws ObjectNotFoundException{
+    public void testPojoDocInterop() throws ObjectNotFoundException, TypeDescriptorNotFoundException{
         //test pojo to document
         Pojo2 nestedPojo = new Pojo2();
         nestedPojo.setId(22);
@@ -397,7 +398,7 @@ public class SpaceAPIControllerTest {
     }
 
     @Test
-    public void testEnum() throws ObjectNotFoundException{
+    public void testEnum() throws ObjectNotFoundException, TypeDescriptorNotFoundException{
 
         //write first doc
         SpaceDocument document = new SpaceDocument("Person")
@@ -424,6 +425,17 @@ public class SpaceAPIControllerTest {
         compareMaps(expected, result[0]);
     }
     
+    @Test(expected=TypeDescriptorNotFoundException.class) 
+    public void testTypeNotRegisteredOnPut() throws Exception {
+        String content = "[{\"id\":\"1\", \"val\":\"123\"}]";
+        spaceAPIController.put(UnregisteredPojo.class.getName(), new  BufferedReader(new StringReader(content)));
+    }
+
+    @Test(expected=TypeDescriptorNotFoundException.class) 
+    public void testTypeNotRegisteredOnPost() throws Exception {
+        String content = "[{\"id\":\"1\", \"val\":\"123\"}]";
+        spaceAPIController.post(UnregisteredPojo.class.getName(), new  BufferedReader(new StringReader(content)));
+    }
     
     private static void comparePojoAndProps(IPojo pojo, Map<String, Object> resultMap){
         Assert.assertEquals(pojo.getId(), resultMap.get("id"));

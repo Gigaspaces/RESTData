@@ -29,6 +29,7 @@ import org.openspaces.core.GigaSpace;
 import org.openspaces.core.GigaSpaceConfigurer;
 import org.openspaces.core.space.UrlSpaceConfigurer;
 import org.openspaces.rest.exceptions.ObjectNotFoundException;
+import org.openspaces.rest.exceptions.TypeDescriptorNotFoundException;
 import org.openspaces.rest.utils.ControllerUtils;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataAccessException;
@@ -245,9 +246,11 @@ public class SpaceAPIController {
 	 * @param type
 	 * @param reader
 	 * @return
+	 * @throws TypeDescriptorNotFoundException 
 	 */
 	@RequestMapping(value = "/{type}", method = RequestMethod.POST)
-	public @ResponseBody String post(@PathVariable String type, BufferedReader reader){
+	public @ResponseBody String post(@PathVariable String type, BufferedReader reader) 
+	        throws TypeDescriptorNotFoundException{
 	    if(logger.isLoggable(Level.FINE))
 	        logger.fine("performing post, type: " + type);
 	    
@@ -261,9 +264,11 @@ public class SpaceAPIController {
 	 * @param type
 	 * @param reader
 	 * @return
+	 * @throws TypeDescriptorNotFoundException 
 	 */
 	@RequestMapping(value = "/{type}", method = RequestMethod.PUT)
-	public @ResponseBody String put(@PathVariable String type, BufferedReader reader){
+	public @ResponseBody String put(@PathVariable String type, BufferedReader reader) 
+	        throws TypeDescriptorNotFoundException{
 	    if(logger.isLoggable(Level.FINE))
 	        logger.fine("performing put, type: " + type);
 	    
@@ -271,6 +276,20 @@ public class SpaceAPIController {
 		return "success";
 	}
 
+	 /**
+     * TypeDescriptorNotFoundException Handler, returns an error response to the client
+     * 
+     * @param writer
+     * @throws IOException
+     */
+    @ExceptionHandler(TypeDescriptorNotFoundException.class)
+    @ResponseStatus(value=HttpStatus.NOT_FOUND)
+    public void resolveTypeDescriptorNotFoundException(TypeDescriptorNotFoundException e, Writer writer) throws IOException {
+        if(logger.isLoggable(Level.FINE))
+            logger.fine("type descriptor for typeName: " + e.getTypeName() + " not found, returning error response");
+        
+        writer.write("{\"error\":\"Type: " + e.getTypeName() + " is not registered in space.\"}");
+    }
 	
 	/**
 	 * ObjectNotFoundException Handler, returns an error response to the client
@@ -310,8 +329,10 @@ public class SpaceAPIController {
 	 * @param type
 	 * @param reader
 	 * @param updateModifiers
+	 * @throws TypeDescriptorNotFoundException 
 	 */
-	private void createAndWriteDocuments(String type, BufferedReader reader, int updateModifiers){
+	private void createAndWriteDocuments(String type, BufferedReader reader, int updateModifiers) 
+	        throws TypeDescriptorNotFoundException{
 		logger.info("creating space Documents from payload");
 	    SpaceDocument[] spaceDocuments = ControllerUtils.createSpaceDocuments(type, reader, gigaSpace);
 		if (spaceDocuments != null && spaceDocuments.length > 0){

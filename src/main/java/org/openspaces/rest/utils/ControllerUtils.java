@@ -25,12 +25,12 @@ import java.util.logging.Logger;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.codehaus.jackson.type.TypeReference;
 import org.openspaces.core.GigaSpace;
+import org.openspaces.rest.exceptions.TypeDescriptorNotFoundException;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 
 import com.gigaspaces.document.SpaceDocument;
 import com.gigaspaces.metadata.SpacePropertyDescriptor;
 import com.gigaspaces.metadata.SpaceTypeDescriptor;
-import com.gigaspaces.metadata.SpaceTypeDescriptorBuilder;
 import com.j_spaces.core.UnknownTypeException;
 
 /**
@@ -44,7 +44,8 @@ public class ControllerUtils {
     private static final TypeReference<HashMap<String, Object>[]> typeRef = new TypeReference<HashMap<String, Object>[]>() {};
 	private static final ObjectMapper mapper = new ObjectMapper();
 	
-	public static SpaceDocument[] createSpaceDocuments(String type, BufferedReader reader, GigaSpace gigaSpace){
+	public static SpaceDocument[] createSpaceDocuments(String type, BufferedReader reader, GigaSpace gigaSpace) 
+	        throws TypeDescriptorNotFoundException {
         HashMap<String, Object>[] propertyMapArr;
         try{
             //get payload
@@ -95,23 +96,12 @@ public class ControllerUtils {
 	 * @param gigaSpace
 	 * @return
 	 * @throws UnknownTypeException
+	 * @throws TypeDescriptorNotFoundException 
 	 */
-	private static Map<String, Object> getTypeBasedProperties(String documentType, Map<String, Object> propertyMap, GigaSpace gigaSpace) throws UnknownTypeException {
+	private static Map<String, Object> getTypeBasedProperties(String documentType, Map<String, Object> propertyMap, GigaSpace gigaSpace) throws UnknownTypeException, TypeDescriptorNotFoundException {
 		SpaceTypeDescriptor spaceTypeDescriptor = gigaSpace.getTypeManager().getTypeDescriptor(documentType);
 		if (spaceTypeDescriptor == null){
-		    String idProperty = (String) propertyMap.keySet().toArray()[0];
-		    if(logger.isLoggable(Level.WARNING)){
-		        StringBuilder logWarning = new StringBuilder("Could not find the SpaceTypeDescriptor for the type ").append(documentType)
-		        .append(", Setting(randomly) Id Property to ").append(idProperty).append(" and properties type to be String");
-		        logger.warning(logWarning.toString());
-		    }
-			SpaceTypeDescriptor typeDescriptor = new SpaceTypeDescriptorBuilder(documentType)
-			.idProperty(idProperty)
-	        .routingProperty(idProperty)
-	        .create();
-		    // Register type:
-		    gigaSpace.getTypeManager().registerTypeDescriptor(typeDescriptor);
-		    return propertyMap;
+		    throw new TypeDescriptorNotFoundException(documentType);
 		}else{
 		    Map<String, Object> buildTypeBasedProperties = buildTypeBasedProperties(propertyMap, spaceTypeDescriptor, gigaSpace);
 		    return buildTypeBasedProperties;
@@ -122,7 +112,7 @@ public class ControllerUtils {
     @SuppressWarnings("unchecked")
     private static Map<String, Object> buildTypeBasedProperties(
             Map<String, Object> propertyMap,
-            SpaceTypeDescriptor spaceTypeDescriptor, GigaSpace gigaSpace) throws UnknownTypeException {
+            SpaceTypeDescriptor spaceTypeDescriptor, GigaSpace gigaSpace) throws UnknownTypeException, TypeDescriptorNotFoundException {
         HashMap<String, Object> newPropertyMap = new HashMap<String, Object>();
         for(Entry<String, Object> entry : propertyMap.entrySet()){
             String propKey = entry.getKey();
