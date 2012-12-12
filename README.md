@@ -39,7 +39,7 @@
 	<li><font color="#000000">updateMultiple</font><div class="preformatted panel" style="border-width: 1px;"><div class="preformattedContent panelContent">
 <pre>curl -XPUT -d '[{"id":"1", "data":"testdata", "data2":"commonUpdated", "nestedData" : {"nestedKey1":"nestedValue1"}}, {"id":"2", "data":"testdata2", "data2":"commonUpdated", "nestedData" : {"nestedKey2":"nestedValue2"}}, {"id":"3", "data":"testdata3", "data2":"commonUpdated", "nestedData" : {"nestedKey3":"nestedValue3"}}]' http://localhost:8080/WebApp/rest/data/Item
 </pre>
-</div></div><img class="emoticon" src="/images/icons/emoticons/check.gif" height="16" width="16" align="absmiddle" alt="" border="0"/> see that data2 field is updated: <a href="http://localhost:8080/WebApp/rest/data/Item/_criteria?q=data2='commonUpdated'" rel="nofollow">http://localhost:8080/WebApp/rest/data/Item/_criteria?q=data2='commonUpdated'</a></li>
+</div></div><img class="emoticon" src=" https://jira.atlassian.com/images/icons/emoticons/check.gif" height="16" width="16" align="absmiddle" alt="" border="0"/> see that data2 field is updated: <a href="http://localhost:8080/WebApp/rest/data/Item/_criteria?q=data2='commonUpdated'" rel="nofollow">http://localhost:8080/WebApp/rest/data/Item/_criteria?q=data2='commonUpdated'</a></li>
 </ul>
 
 
@@ -47,7 +47,7 @@
 	<li>&nbsp;<font color="#000000">single nested update</font><div class="preformatted panel" style="border-width: 1px;"><div class="preformattedContent panelContent">
 <pre>curl -XPUT -d '{"id":"1", "data":"testdata", "data2":"commonUpdated", "nestedData" : {"nestedKey1":"nestedValue1Updated"}}' http://localhost:8080/WebApp/rest/data/Item
 </pre>
-</div></div><img class="emoticon" src="/images/icons/emoticons/check.gif" height="16" width="16" align="absmiddle" alt="" border="0"/> <font color="#000000">see that Item1 nested field is updated:</font><font color="#000000">&nbsp;</font>http://localhost:8080/WebApp/rest/data/Item/1</li>
+</div></div><img class="emoticon" src=" https://jira.atlassian.com/images/icons/emoticons/check.gif" height="16" width="16" align="absmiddle" alt="" border="0"/> <font color="#000000">see that Item1 nested field is updated:</font><font color="#000000">&nbsp;</font>http://localhost:8080/WebApp/rest/data/Item/1</li>
 </ul>
 
 
@@ -55,7 +55,7 @@
 	<li><font color="#000000">takeMultiple (url is encoded, the query is "id=1 or id=2")</font><div class="preformatted panel" style="border-width: 1px;"><div class="preformattedContent panelContent">
 <pre>curl -XDELETE http://localhost:8080/WebApp/rest/data/Item/_criteria?q=id=%271%27%20or%20id=%272%27
 </pre>
-</div></div><img class="emoticon" src="/images/icons/emoticons/check.gif" height="16" width="16" align="absmiddle" alt="" border="0"/> see that only Item3 remains: <a href="http://localhost:8080/WebApp/rest/data/Item/_criteria?q=id=%271%27%20or%20id=%272%27%20or%20id=%273%27" rel="nofollow">http://localhost:8080/WebApp/rest/data/Item/_criteria?q=id=%271%27%20or%20id=%272%27%20or%20id=%273%27</a></li>
+</div></div><img class="emoticon" src=" https://jira.atlassian.com/images/icons/emoticons/check.gif" height="16" width="16" align="absmiddle" alt="" border="0"/> see that only Item3 remains: <a href="http://localhost:8080/WebApp/rest/data/Item/_criteria?q=id=%271%27%20or%20id=%272%27%20or%20id=%273%27" rel="nofollow">http://localhost:8080/WebApp/rest/data/Item/_criteria?q=id=%271%27%20or%20id=%272%27%20or%20id=%273%27</a></li>
 </ul>
 
 
@@ -64,7 +64,7 @@
 <pre>curl -XDELETE "http://localhost:8080/WebApp/rest/data/Item/3"
 </pre>
 </div></div><br/>
-<img class="emoticon" src="/images/icons/emoticons/check.gif" height="16" width="16" align="absmiddle" alt="" border="0"/> see that Item3 does not exists: <a href="http://localhost:8080/WebApp/rest/data/Item/_criteria?q=id=%271%27%20or%20id=%272%27%20or%20id=%273%27" rel="nofollow">http://localhost:8080/WebApp/rest/data/Item/_criteria?q=id=%271%27%20or%20id=%272%27%20or%20id=%273%27</a></li>
+<img class="emoticon" src=" https://jira.atlassian.com/images/icons/emoticons/check.gif" height="16" width="16" align="absmiddle" alt="" border="0"/> see that Item3 does not exists: <a href="http://localhost:8080/WebApp/rest/data/Item/_criteria?q=id=%271%27%20or%20id=%272%27%20or%20id=%273%27" rel="nofollow">http://localhost:8080/WebApp/rest/data/Item/_criteria?q=id=%271%27%20or%20id=%272%27%20or%20id=%273%27</a></li>
 </ul>
 
 
