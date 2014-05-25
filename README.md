@@ -20,7 +20,7 @@ Note: The following examples uses <i>myDataGrid</i> as space name.
 <ul>
     <li>IntroduceType
         <ul>
-        		<li>&nbsp;<a href="http://localhost:8080/RESTData/rest/data/Item/_introduce_type?space=myDataGrid" rel="nofollow">http://localhost:8080/RESTData/rest/data/Item/_introduce_type?space=myDataGrid</a></li>
+        		<li>&nbsp;<a href="http://localhost:8080/RESTData/rest/data/Item/_introduce_type?space=myDataGrid&spaceid=id" rel="nofollow">http://localhost:8080/RESTData/rest/data/Item/_introduce_type?space=myDataGrid</a></li>
         </ul>
     </li>
 	<li>WriteMultiple
