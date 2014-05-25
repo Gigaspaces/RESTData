@@ -16,7 +16,7 @@
 
 <h2><a name="ProjectDocumentation-Examples"></a>Examples</h2>
 Note: The following examples uses <i>myDataGrid</i> as space name.
-Note: If the <i>space</i> parameter is not passed, <i>defaultSpaceName</i> defined in config.properties will be used.
+<br/>Note: If the <i>space</i> parameter is not passed, <i>defaultSpaceName</i> defined in config.properties will be used.
 <ul>
     <li>IntroduceType
         <ul>
