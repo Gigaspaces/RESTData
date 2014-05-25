@@ -16,49 +16,41 @@
 package org.openspaces.rest.space;
 
 
-import java.io.BufferedReader;
-import java.io.IOException;
-import java.io.Writer;
-import java.util.Map;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-
-import net.jini.core.lease.Lease;
-
-import org.openspaces.core.GigaSpace;
-import org.openspaces.core.GigaSpaceConfigurer;
-import org.openspaces.core.space.UrlSpaceConfigurer;
-import org.openspaces.rest.exceptions.ObjectNotFoundException;
-import org.openspaces.rest.exceptions.TypeNotFoundException;
-import org.openspaces.rest.utils.ControllerUtils;
-import org.springframework.beans.factory.annotation.Value;
-import org.springframework.dao.DataAccessException;
-import org.springframework.http.HttpStatus;
-import org.springframework.stereotype.Controller;
-import org.springframework.web.bind.annotation.ExceptionHandler;
-import org.springframework.web.bind.annotation.PathVariable;
-import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestMethod;
-import org.springframework.web.bind.annotation.RequestParam;
-import org.springframework.web.bind.annotation.ResponseBody;
-import org.springframework.web.bind.annotation.ResponseStatus;
-import org.springframework.web.servlet.ModelAndView;
-
 import com.gigaspaces.document.SpaceDocument;
 import com.gigaspaces.metadata.SpacePropertyDescriptor;
 import com.gigaspaces.metadata.SpaceTypeDescriptor;
+import com.gigaspaces.metadata.SpaceTypeDescriptorBuilder;
 import com.gigaspaces.query.IdQuery;
 import com.gigaspaces.query.QueryResultType;
-import com.j_spaces.core.IJSpace;
 import com.j_spaces.core.UnknownTypeException;
 import com.j_spaces.core.client.SQLQuery;
 import com.j_spaces.core.client.UpdateModifiers;
+import net.jini.core.lease.Lease;
+import org.openspaces.core.GigaSpace;
+import org.openspaces.rest.exceptions.ObjectNotFoundException;
+import org.openspaces.rest.exceptions.TypeNotFoundException;
+import org.openspaces.rest.utils.ControllerUtils;
+import org.springframework.dao.DataAccessException;
+import org.springframework.http.HttpStatus;
+import org.springframework.stereotype.Controller;
+import org.springframework.web.bind.annotation.*;
+import org.springframework.web.servlet.ModelAndView;
+
+import java.io.BufferedReader;
+import java.io.IOException;
+import java.io.Writer;
+import java.util.Hashtable;
+import java.util.Map;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * Spring MVC controller for the RESTful Space API
  * 
  * usage examples:
  * 	GET:
+ * 	    http://localhost:8080/rest/data/Item/_introduce_type?spaceid=customerid
+ *
  * 		http://localhost:8080/rest/data/Item/1
  * 		http://192.168.9.47:8080/rest/data/Item/_criteria?q=data2='common'
  * 
@@ -84,15 +76,19 @@ import com.j_spaces.core.client.UpdateModifiers;
 @Controller
 @RequestMapping(value = "/rest/data/*")
 public class SpaceAPIController {
-	
-    private static final String CRITERIA_KEYWORD = "_criteria";
-    private static final String QUERY_PARAM = "q";
-    private static final String SIZE_PARAM = "s";
-    
+
+	private static final String CRITERIA_KEYWORD = "_criteria";
+	private static final String QUERY_PARAM = "q";
+	private static final String SIZE_PARAM = "s";
+	private static final String SPACE_PARAM="space";
+	private static final String LOCATORS_PARAM="locators";
+    private static final String INTRODUCE_TYPE = "_introduce_type";
+    private static final String SPACEID_PARAM = "spaceid";
+
 	private int maxReturnValues = Integer.MAX_VALUE;
-	private GigaSpace gigaSpace;
 	private static final Logger logger = Logger.getLogger(SpaceAPIController.class.getName());
-	
+
+
 	/**
 	 * redirects to index view
 	 * @return
@@ -101,7 +97,41 @@ public class SpaceAPIController {
 	public ModelAndView redirectToIndex(){
 		return new ModelAndView("index");
 	}
-	
+
+
+    /**
+     * REST GET for inroducing type to space
+     * @param type type name
+     * @param space space name
+     * @param locators locators
+     * @return
+     */
+    @RequestMapping(value = "/{type}/"+INTRODUCE_TYPE, method = RequestMethod.GET, params = SPACEID_PARAM)
+    public @ResponseBody Map<String, Object> introduceType(
+            @PathVariable String type,
+            @RequestParam(value=SPACE_PARAM , defaultValue="${defaultSpaceName}") String space,
+            @RequestParam(value=LOCATORS_PARAM,defaultValue="localhost") String locators,
+            @RequestParam(value=SPACEID_PARAM, defaultValue="id") String spaceID
+    ) {
+        if(logger.isLoggable(Level.FINE))
+            logger.fine("intoducing type: "+type+" to "+space);
+
+        Map<String, Object> result = new Hashtable<String, Object>();
+        try {
+            GigaSpace gigaSpace = ControllerUtils.xapCache.get(space, locators);
+            SpaceTypeDescriptor spaceTypeDescriptor = new SpaceTypeDescriptorBuilder(type).idProperty(spaceID)
+                    .routingProperty(spaceID).supportsDynamicProperties(true).create();
+            gigaSpace.getTypeManager().registerTypeDescriptor(spaceTypeDescriptor);
+            result.put("result","ok");
+        } catch (Exception e) {
+            result.put("result","error");
+            result.put("exception", e);
+        }
+
+        return result;
+    }
+
+
 	/**
 	 * REST GET by query request handler
 	 * 
@@ -112,30 +142,34 @@ public class SpaceAPIController {
 	 */
 	@RequestMapping(value = "/{type}/" + CRITERIA_KEYWORD, method = RequestMethod.GET, params=QUERY_PARAM)
 	public @ResponseBody Map<String, Object>[] getByQuery(
-	        @PathVariable String type, 
-	        @RequestParam(value=QUERY_PARAM) String query,
-	        @RequestParam(value=SIZE_PARAM, required=false) Integer size) throws ObjectNotFoundException{
-	    if(logger.isLoggable(Level.FINE))
-	        logger.fine("creating read query with type: " + type + " and query: " + query);
-	    
-	    SQLQuery<SpaceDocument> sqlQuery = new SQLQuery<SpaceDocument>(type, query, QueryResultType.DOCUMENT);
-	    int maxSize = (size==null ? maxReturnValues : size.intValue());
-        SpaceDocument[] docs;
-        try {
-            docs = gigaSpace.readMultiple(sqlQuery, maxSize);
-        } catch (DataAccessException e) {
-            throw translateDataAccessException(e, type);
-        }
-        
-        Map<String, Object>[] result;
-        if (docs == null || docs.length == 0){
-            throw new ObjectNotFoundException("no objects matched the criteria");
-        }
-        result = ControllerUtils.createPropertiesResult(docs);
-        return result;
+			@PathVariable String type, 
+			@RequestParam(value=SPACE_PARAM , defaultValue="${defaultSpaceName}") String space,
+			@RequestParam(value=LOCATORS_PARAM,defaultValue="localhost") String locators,
+			@RequestParam(value=QUERY_PARAM) String query,
+			@RequestParam(value=SIZE_PARAM, required=false) Integer size) throws ObjectNotFoundException{
+		if(logger.isLoggable(Level.FINE))
+			logger.fine("creating read query with type: " + type + " and query: " + query);
+
+		GigaSpace gigaSpace=ControllerUtils.xapCache.get(space,locators);
+		SQLQuery<SpaceDocument> sqlQuery = new SQLQuery<SpaceDocument>(type, query, QueryResultType.DOCUMENT);
+		int maxSize = (size==null ? maxReturnValues : size.intValue());
+		SpaceDocument[] docs;
+		try {
+			docs = gigaSpace.readMultiple(sqlQuery, maxSize);
+		} catch (DataAccessException e) {
+			throw translateDataAccessException(gigaSpace,e, type);
+		}
+
+		Map<String, Object>[] result;
+		if (docs == null || docs.length == 0){
+			throw new ObjectNotFoundException("no objects matched the criteria");
+		}
+		result = ControllerUtils.createPropertiesResult(docs);
+		return result;
 	}
-	
-    /**
+
+
+	/**
 	 * REST GET by ID request handler
 	 * 
 	 * @param type
@@ -145,49 +179,79 @@ public class SpaceAPIController {
 	 * @throws UnknownTypeException 
 	 */
 	@RequestMapping(value = "/{type}/{id}", method = RequestMethod.GET)
-	public @ResponseBody Map<String, Object> getById(@PathVariable String type, @PathVariable String id) throws ObjectNotFoundException{
-	    //read by id request
-	    Object typedBasedId = getTypeBasedIdObject(type, id);
-	    if(logger.isLoggable(Level.FINE))
-	        logger.fine("creating readbyid query with type: " + type + " and id: " + id);
-	    IdQuery<SpaceDocument> idQuery = new IdQuery<SpaceDocument>(type, typedBasedId, QueryResultType.DOCUMENT);
-	    SpaceDocument doc = gigaSpace.readById(idQuery);
-	    if (doc == null){
-	        throw new ObjectNotFoundException("no object matched the criteria");
-	    }
-	    return doc.getProperties();
-	}
-	
-	/**
-     * REST GET by type request handler
-     * 
-     * @param type
-     * @return
-     * @throws ObjectNotFoundException
-     * @throws UnknownTypeException 
-     */
-	@RequestMapping(value = "/{type}", method = RequestMethod.GET)
-	public @ResponseBody Map<String, Object>[]  getByType( 
-	        @PathVariable String type,
-	        @RequestParam(value=SIZE_PARAM, required=false) Integer size)throws ObjectNotFoundException{
-	    return getByQuery(type, "", size);
+	public @ResponseBody Map<String, Object> getById(
+			@RequestParam(value=SPACE_PARAM , defaultValue="${defaultSpaceName}") String space,
+			@RequestParam(value=LOCATORS_PARAM,defaultValue="localhost") String locators,
+			@PathVariable String type,
+			@PathVariable String id) throws ObjectNotFoundException{
+		
+		GigaSpace gigaSpace=ControllerUtils.xapCache.get(space,locators);
+		//read by id request
+		Object typedBasedId = getTypeBasedIdObject(gigaSpace,type, id);
+		if(logger.isLoggable(Level.FINE))
+			logger.fine("creating readbyid query with type: " + type + " and id: " + id);
+		IdQuery<SpaceDocument> idQuery = new IdQuery<SpaceDocument>(type, typedBasedId, QueryResultType.DOCUMENT);
+		SpaceDocument doc = gigaSpace.readById(idQuery);
+		if (doc == null){
+			throw new ObjectNotFoundException("no object matched the criteria");
+		}
+		return doc.getProperties();
 	}
 
-    private Object getTypeBasedIdObject(String type, String id) {
-        SpaceTypeDescriptor typeDescriptor = gigaSpace.getTypeManager().getTypeDescriptor(type);
-	    if (typeDescriptor == null){
-	        throw new TypeNotFoundException(type);
-	    }
-	    
-	    //Investigate id type
-	    String idPropertyName = typeDescriptor.getIdPropertyName();
-	    SpacePropertyDescriptor idProperty = typeDescriptor.getFixedProperty(idPropertyName);
-	    try {
-            return ControllerUtils.convertPropertyToPrimitiveType(id, idProperty.getType(), idPropertyName);
-        } catch (UnknownTypeException e) {
-            throw new DataAccessException("Only primitive SpaceId is currently supported by RestData") {};
-        }
-    }
+	/**
+	 * REST COUNT request handler
+	 * 
+	 */
+	@RequestMapping(value = "/{type}/count", method = RequestMethod.GET)
+	public Map<String, Object> count(
+			@RequestParam(value=SPACE_PARAM , defaultValue="${defaultSpaceName}") String space,
+			@RequestParam(value=LOCATORS_PARAM,defaultValue="localhost") String locators,
+			@PathVariable String type) throws ObjectNotFoundException{
+		
+		GigaSpace gigaSpace=ControllerUtils.xapCache.get(space,locators);
+		//read by id request
+		Integer cnt = gigaSpace.count(new SpaceDocument(type));
+		if (cnt == null){
+			throw new ObjectNotFoundException("no object matched the criteria");
+		}
+        Map<String, Object> result = new Hashtable<String, Object>();
+		result.put("count", cnt);
+		return result;
+	}
+
+
+	/**
+	 * REST GET by type request handler
+	 * 
+	 * @param type
+	 * @return
+	 * @throws ObjectNotFoundException
+	 * @throws UnknownTypeException 
+	 */
+	@RequestMapping(value = "/{type}", method = RequestMethod.GET)
+	public @ResponseBody Map<String, Object>[]  getByType(
+			@RequestParam(value=SPACE_PARAM , defaultValue="${defaultSpaceName}") String space,
+			@RequestParam(value=LOCATORS_PARAM,defaultValue="localhost") String locators,
+			@PathVariable String type,
+			@RequestParam(value=SIZE_PARAM, required=false) Integer size)throws ObjectNotFoundException{
+		return getByQuery(type, space, locators, "", size);
+	}
+
+	private Object getTypeBasedIdObject(GigaSpace gigaSpace,String type, String id) {
+		SpaceTypeDescriptor typeDescriptor = gigaSpace.getTypeManager().getTypeDescriptor(type);
+		if (typeDescriptor == null){
+			throw new TypeNotFoundException(type);
+		}
+
+		//Investigate id type
+		String idPropertyName = typeDescriptor.getIdPropertyName();
+		SpacePropertyDescriptor idProperty = typeDescriptor.getFixedProperty(idPropertyName);
+		try {
+			return ControllerUtils.convertPropertyToPrimitiveType(id, idProperty.getType(), idPropertyName);
+		} catch (UnknownTypeException e) {
+			throw new DataAccessException("Only primitive SpaceId is currently supported by RestData") {};
+		}
+	}
 
 
 	/**
@@ -199,19 +263,25 @@ public class SpaceAPIController {
 	 * @throws ObjectNotFoundException
 	 */
 	@RequestMapping(value = "/{type}/{id}", method = RequestMethod.DELETE)
-	public @ResponseBody Map<String, Object> deleteById(@PathVariable String type, @PathVariable String id) throws ObjectNotFoundException {
-	    //take by id
-	    Object typedBasedId = getTypeBasedIdObject(type, id);
-	    if(logger.isLoggable(Level.FINE))
-	        logger.fine("creating takebyid query with type: " + type + " and id: " + id);
-	    SpaceDocument doc;
-        doc = gigaSpace.takeById(new IdQuery<SpaceDocument>(type, typedBasedId, QueryResultType.DOCUMENT));
-	    if (doc == null){
-	        throw new ObjectNotFoundException("no object matched the criteria");
-	    }
-	    return doc.getProperties();
+	public @ResponseBody Map<String, Object> deleteById(
+			@RequestParam(value=SPACE_PARAM , defaultValue="${defaultSpaceName}") String space,
+			@RequestParam(value=LOCATORS_PARAM,defaultValue="localhost") String locators,
+			@PathVariable String type,
+			@PathVariable String id) throws ObjectNotFoundException {
+		
+		GigaSpace gigaSpace=ControllerUtils.xapCache.get(space,locators);
+		//take by id
+		Object typedBasedId = getTypeBasedIdObject(gigaSpace,type, id);
+		if(logger.isLoggable(Level.FINE))
+			logger.fine("creating takebyid query with type: " + type + " and id: " + id);
+		SpaceDocument doc;
+		doc = gigaSpace.takeById(new IdQuery<SpaceDocument>(type, typedBasedId, QueryResultType.DOCUMENT));
+		if (doc == null){
+			throw new ObjectNotFoundException("no object matched the criteria");
+		}
+		return doc.getProperties();
 	}
-	
+
 	/**
 	 * REST DELETE by query request handler 
 	 * @param type
@@ -220,36 +290,40 @@ public class SpaceAPIController {
 	 */
 	@RequestMapping(value = "/{type}/" + CRITERIA_KEYWORD, method = RequestMethod.DELETE, params=QUERY_PARAM)
 	public @ResponseBody Map<String, Object>[] deleteByQuery(
-	        @PathVariable String type, 
-	        @RequestParam(value=QUERY_PARAM) String query,
-	        @RequestParam(value=SIZE_PARAM, required=false) Integer size){
-	    if(logger.isLoggable(Level.FINE))
-	        logger.fine("creating take query with type: " + type + " and query: " + query);
-	    
-	    SQLQuery<SpaceDocument> sqlQuery = new SQLQuery<SpaceDocument>(type, query, QueryResultType.DOCUMENT);
-	    int maxSize = (size==null ? maxReturnValues : size.intValue());
-	    SpaceDocument[] docs;
-        try {
-            docs = gigaSpace.takeMultiple(sqlQuery, maxSize);
-        } catch (DataAccessException e) {
-            throw translateDataAccessException(e, type);
-        }
-	    return ControllerUtils.createPropertiesResult(docs);
+			@RequestParam(value=SPACE_PARAM , defaultValue="${defaultSpaceName}") String space,
+			@RequestParam(value=LOCATORS_PARAM,defaultValue="localhost") String locators,
+			@PathVariable String type, 
+			@RequestParam(value=QUERY_PARAM) String query,
+			@RequestParam(value=SIZE_PARAM, required=false) Integer size){
+		if(logger.isLoggable(Level.FINE))
+			logger.fine("creating take query with type: " + type + " and query: " + query);
+
+		GigaSpace gigaSpace=ControllerUtils.xapCache.get(space,locators);
+		SQLQuery<SpaceDocument> sqlQuery = new SQLQuery<SpaceDocument>(type, query, QueryResultType.DOCUMENT);
+		int maxSize = (size==null ? maxReturnValues : size.intValue());
+		SpaceDocument[] docs;
+		try {
+			docs = gigaSpace.takeMultiple(sqlQuery, maxSize);
+		} catch (DataAccessException e) {
+			throw translateDataAccessException(gigaSpace, e, type);
+		}
+		return ControllerUtils.createPropertiesResult(docs);
 	}
-	
+
 	/**
-     * REST DELETE by type request handler 
-     * @param type
-     * @param query
-     * @return
-     */
-    @RequestMapping(value = "/{type}", method = RequestMethod.DELETE)
-    public @ResponseBody Map<String, Object>[] deleteByType(
-            @PathVariable String type, 
-            @RequestParam(value=SIZE_PARAM, required=false) Integer size){
-        return deleteByQuery(type, "", size);
-    }
-	
+	 * REST DELETE by type request handler 
+	 * @param type
+	 * @return
+	 */
+	@RequestMapping(value = "/{space}/{locators}/{type}", method = RequestMethod.DELETE)
+	public @ResponseBody Map<String, Object>[] deleteByType(
+			@PathVariable String space, 
+			@PathVariable String locators, 
+			@PathVariable String type, 
+			@RequestParam(value=SIZE_PARAM, required=false) Integer size){
+		return deleteByQuery(space,locators,type, "", size);
+	}
+
 	/**
 	 * REST POST request handler
 	 * 
@@ -259,15 +333,20 @@ public class SpaceAPIController {
 	 * @throws TypeNotFoundException 
 	 */
 	@RequestMapping(value = "/{type}", method = RequestMethod.POST)
-	public @ResponseBody String post(@PathVariable String type, BufferedReader reader) 
-	        throws TypeNotFoundException{
-	    if(logger.isLoggable(Level.FINE))
-	        logger.fine("performing post, type: " + type);
-	    
-	    createAndWriteDocuments(type, reader, UpdateModifiers.WRITE_ONLY);
+	public @ResponseBody String post(
+			@RequestParam(value=SPACE_PARAM , defaultValue="${defaultSpaceName}") String space,
+			@RequestParam(value=LOCATORS_PARAM,defaultValue="localhost") String locators,
+			@PathVariable String type,
+			BufferedReader reader) 
+					throws TypeNotFoundException{
+		if(logger.isLoggable(Level.FINE))
+			logger.fine("performing post, type: " + type);
+
+		GigaSpace gigaSpace=ControllerUtils.xapCache.get(space,locators);
+		createAndWriteDocuments(gigaSpace, type, reader, UpdateModifiers.WRITE_ONLY);
 		return "success";
 	}
-	
+
 	/**
 	 * REST PUT request handler
 	 * 
@@ -277,38 +356,43 @@ public class SpaceAPIController {
 	 * @throws TypeNotFoundException 
 	 */
 	@RequestMapping(value = "/{type}", method = RequestMethod.PUT)
-	public @ResponseBody String put(@PathVariable String type, BufferedReader reader) 
-	        throws TypeNotFoundException{
-	    if(logger.isLoggable(Level.FINE))
-	        logger.fine("performing put, type: " + type);
-	    
-	    createAndWriteDocuments(type, reader, UpdateModifiers.UPDATE_OR_WRITE);
+	public @ResponseBody String put(
+			@RequestParam(value=SPACE_PARAM , defaultValue="${defaultSpaceName}") String space,
+			@RequestParam(value=LOCATORS_PARAM,defaultValue="localhost") String locators,
+			@PathVariable String type,
+			BufferedReader reader) 
+					throws TypeNotFoundException{
+		if(logger.isLoggable(Level.FINE))
+			logger.fine("performing put, type: " + type);
+
+		GigaSpace gigaSpace=ControllerUtils.xapCache.get(space,locators);
+		createAndWriteDocuments(gigaSpace, type, reader, UpdateModifiers.UPDATE_OR_WRITE);
 		return "success";
 	}
 
-	private RuntimeException translateDataAccessException(DataAccessException e, String type) {
-	    if (gigaSpace.getTypeManager().getTypeDescriptor(type) == null) {
-	        return new TypeNotFoundException(type);
-	    } else {
-	        return e;
-	    }
-    }
-	
-	 /**
-     * TypeNotFoundException Handler, returns an error response to the client
-     * 
-     * @param writer
-     * @throws IOException
-     */
-    @ExceptionHandler(TypeNotFoundException.class)
-    @ResponseStatus(value=HttpStatus.NOT_FOUND)
-    public void resolveTypeDescriptorNotFoundException(TypeNotFoundException e, Writer writer) throws IOException {
-        if(logger.isLoggable(Level.FINE))
-            logger.fine("type descriptor for typeName: " + e.getTypeName() + " not found, returning error response");
-        
-        writer.write("{\"error\":\"Type: " + e.getTypeName() + " is not registered in space.\"}");
-    }
-	
+	private RuntimeException translateDataAccessException(GigaSpace gigaSpace,DataAccessException e, String type) {
+		if (gigaSpace.getTypeManager().getTypeDescriptor(type) == null) {
+			return new TypeNotFoundException(type);
+		} else {
+			return e;
+		}
+	}
+
+	/**
+	 * TypeNotFoundException Handler, returns an error response to the client
+	 * 
+	 * @param writer
+	 * @throws IOException
+	 */
+	@ExceptionHandler(TypeNotFoundException.class)
+	@ResponseStatus(value=HttpStatus.NOT_FOUND)
+	public void resolveTypeDescriptorNotFoundException(TypeNotFoundException e, Writer writer) throws IOException {
+		if(logger.isLoggable(Level.FINE))
+			logger.fine("type descriptor for typeName: " + e.getTypeName() + " not found, returning error response");
+
+		writer.write("{\"error\":\"Type: " + e.getTypeName() + " is not registered in space.\"}");
+	}
+
 	/**
 	 * ObjectNotFoundException Handler, returns an error response to the client
 	 * 
@@ -318,10 +402,10 @@ public class SpaceAPIController {
 	@ExceptionHandler(ObjectNotFoundException.class)
 	@ResponseStatus(value=HttpStatus.NOT_FOUND)
 	public void resolveDocumentNotFoundException(Writer writer) throws IOException {
-	    if(logger.isLoggable(Level.FINE))
-	        logger.fine("space id query has no results, returning error response");
-	    
-	    writer.write("{\"error\":\"Object not found\"}");
+		if(logger.isLoggable(Level.FINE))
+			logger.fine("space id query has no results, returning error response");
+
+		writer.write("{\"error\":\"Object not found\"}");
 	}
 
 	/**
@@ -333,14 +417,14 @@ public class SpaceAPIController {
 	@ExceptionHandler(DataAccessException.class)
 	@ResponseStatus(value=HttpStatus.INTERNAL_SERVER_ERROR)
 	public void resolveDataAccessException(Exception e, Writer writer) throws IOException {
-	    if(logger.isLoggable(Level.WARNING))
-	        logger.log(Level.WARNING, "received DataAccessException exception", e);
-	    
-	    writer.write(String.format( "{\"error\":{\"java.class\":\"%s\", \"message\":\"%s\"}}",
-	            e.getClass(), e.getMessage()));
+		if(logger.isLoggable(Level.WARNING))
+			logger.log(Level.WARNING, "received DataAccessException exception", e);
+
+		writer.write(String.format( "{\"error\":{\"java.class\":\"%s\", \"message\":\"%s\"}}",
+				e.getClass(), e.getMessage()));
 	}
-	
-	
+
+
 	/**
 	 * helper method that creates space documents from the httpRequest payload and writes them to space.
 	 * 
@@ -349,27 +433,23 @@ public class SpaceAPIController {
 	 * @param updateModifiers
 	 * @throws TypeNotFoundException 
 	 */
-	private void createAndWriteDocuments(String type, BufferedReader reader, int updateModifiers) 
-	        throws TypeNotFoundException{
+	private void createAndWriteDocuments(GigaSpace gigaSpace, String type, BufferedReader reader, int updateModifiers) 
+			throws TypeNotFoundException{
 		logger.info("creating space Documents from payload");
-	    SpaceDocument[] spaceDocuments = ControllerUtils.createSpaceDocuments(type, reader, gigaSpace);
+		SpaceDocument[] spaceDocuments = ControllerUtils.createSpaceDocuments(type, reader, gigaSpace);
 		if (spaceDocuments != null && spaceDocuments.length > 0){
-		    gigaSpace.writeMultiple(spaceDocuments, Lease.FOREVER, updateModifiers);
-		    if(logger.isLoggable(Level.FINE))
-		        logger.fine("wrote space documents to space");
+			gigaSpace.writeMultiple(spaceDocuments, Lease.FOREVER, updateModifiers);
+			if(logger.isLoggable(Level.FINE))
+				logger.fine("wrote space documents to space");
 		}else{
-		    if(logger.isLoggable(Level.FINE))
-		        logger.fine("did not write anything to space");
+			if(logger.isLoggable(Level.FINE))
+				logger.fine("did not write anything to space");
 		}
 	}
-	
-	@Value("${spaceUrl}")
-	public void initSpaceProxy(String spaceUrl){
-		IJSpace space = new UrlSpaceConfigurer(spaceUrl).space();
-		gigaSpace = new GigaSpaceConfigurer(space).gigaSpace().getClustered();
-	}
-	
+
 	public void setMaxReturnValues(int maxReturnValues) {
-        this.maxReturnValues = maxReturnValues;
-    }
+		this.maxReturnValues = maxReturnValues;
+	}
+
+
 }
