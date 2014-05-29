@@ -49,11 +49,13 @@
             <groupId>com.gigaspaces</groupId>
             <artifactId>gs-openspaces</artifactId>
             <version>${xap-version}</version>
+            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>com.gigaspaces</groupId>
             <artifactId>gs-runtime</artifactId>
             <version>${xap-version}</version>
+            <scope>provided</scope>
         </dependency>
         <dependency>
             <groupId>org.codehaus.jackson</groupId>
