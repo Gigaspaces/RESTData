@@ -17,6 +17,7 @@ package org.openspaces.rest.utils;
 
 import java.io.BufferedReader;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 import java.util.concurrent.ConcurrentHashMap;
@@ -138,6 +139,22 @@ public class ControllerUtils {
 					String typeName = propDesc.getType().getName();
 					Map<String, Object> nestedObjProps = getTypeBasedProperties(typeName, (Map<String, Object>) oldPropValue, gigaSpace) ;
 					convertedObj = new SpaceDocument(typeName, nestedObjProps);
+                }else if(oldPropValue instanceof List) {
+                    List<Map<String, Object>> oldPropValueList = (List<Map<String, Object>>) oldPropValue;
+
+                    int counter = 0;
+                    SpaceDocument[] spaceDocuments = new SpaceDocument[oldPropValueList.size()];
+                    for(Map<String, Object> map : oldPropValueList) {
+
+                        SpaceDocument document = new SpaceDocument();
+                        document.setTypeName((String) map.get("typeName"));
+                        document.setVersion((Integer) map.get("version"));
+                        document.setTransient((Boolean) map.get("transient"));
+                        document.addProperties((Map<String, Object>) map.get("properties"));
+
+                        spaceDocuments[counter++] = document;
+                    }
+                    convertedObj = spaceDocuments;
 				}else{
 					convertedObj = convertPropertyToPrimitiveType((String)oldPropValue, propDesc.getType(), propKey);
 				}
