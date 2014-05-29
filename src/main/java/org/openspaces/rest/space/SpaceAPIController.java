@@ -106,7 +106,7 @@ public class SpaceAPIController {
      * @param locators locators
      * @return
      */
-    @RequestMapping(value = "/{type}/"+INTRODUCE_TYPE, method = RequestMethod.GET, params = SPACEID_PARAM)
+    @RequestMapping(value = "/{type}/"+INTRODUCE_TYPE, method = RequestMethod.GET)
     public @ResponseBody Map<String, Object> introduceType(
             @PathVariable String type,
             @RequestParam(value=SPACE_PARAM , defaultValue="${defaultSpaceName}") String space,
@@ -114,18 +114,23 @@ public class SpaceAPIController {
             @RequestParam(value=SPACEID_PARAM, defaultValue="id") String spaceID
     ) {
         if(logger.isLoggable(Level.FINE))
-            logger.fine("intoducing type: "+type+" to "+space);
+            logger.fine("introducing type: "+type+" to "+space);
 
         Map<String, Object> result = new Hashtable<String, Object>();
         try {
             GigaSpace gigaSpace = ControllerUtils.xapCache.get(space, locators);
+            SpaceTypeDescriptor typeDescriptor = gigaSpace.getTypeManager().getTypeDescriptor(type);
+            if (typeDescriptor != null) {
+                throw new Exception("Type: "+type+" is already introduced to space: "+space+"");
+            }
+
             SpaceTypeDescriptor spaceTypeDescriptor = new SpaceTypeDescriptorBuilder(type).idProperty(spaceID)
                     .routingProperty(spaceID).supportsDynamicProperties(true).create();
             gigaSpace.getTypeManager().registerTypeDescriptor(spaceTypeDescriptor);
             result.put("result","ok");
         } catch (Exception e) {
             result.put("result","error");
-            result.put("exception", e);
+            result.put("exceptionMessage", e.getMessage());
         }
 
         return result;
@@ -150,7 +155,7 @@ public class SpaceAPIController {
 		if(logger.isLoggable(Level.FINE))
 			logger.fine("creating read query with type: " + type + " and query: " + query);
 
-		GigaSpace gigaSpace=ControllerUtils.xapCache.get(space,locators);
+		GigaSpace gigaSpace=ControllerUtils.xapCache.get(space, locators);
 		SQLQuery<SpaceDocument> sqlQuery = new SQLQuery<SpaceDocument>(type, query, QueryResultType.DOCUMENT);
 		int maxSize = (size==null ? maxReturnValues : size.intValue());
 		SpaceDocument[] docs;
@@ -365,7 +370,7 @@ public class SpaceAPIController {
 		if(logger.isLoggable(Level.FINE))
 			logger.fine("performing put, type: " + type);
 
-		GigaSpace gigaSpace=ControllerUtils.xapCache.get(space,locators);
+		GigaSpace gigaSpace=ControllerUtils.xapCache.get(space, locators);
 		createAndWriteDocuments(gigaSpace, type, reader, UpdateModifiers.UPDATE_OR_WRITE);
 		return "success";
 	}
