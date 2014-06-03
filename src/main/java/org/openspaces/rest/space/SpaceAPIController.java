@@ -208,7 +208,7 @@ public class SpaceAPIController {
 	 * 
 	 */
 	@RequestMapping(value = "/{type}/count", method = RequestMethod.GET)
-	public Map<String, Object> count(
+	public @ResponseBody Map<String, Object> count(
 			@RequestParam(value=SPACE_PARAM , defaultValue="${defaultSpaceName}") String space,
 			@RequestParam(value=LOCATORS_PARAM,defaultValue="localhost") String locators,
 			@PathVariable String type) throws ObjectNotFoundException{
