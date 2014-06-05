@@ -30,7 +30,7 @@
 	<h1>REST Data (Space API)</h1>
 	<h2>Examples</h2>
 	<h3>follow the steps one by one to experience the whole feature set</h3>
-    Note: The following examples use <i>myDataGrid</i> which is defined in the config.properties file as space name by passing it as parameter.
+    Note: The following examples use <i><%=spaceName%></i> (defined in config.properties file) as space name by passing it as parameter.
     <form>
         <br/>You can change it here:     <input name="spacename" value="<%=spaceName%>">
         <input type="submit" value="Update this page">
