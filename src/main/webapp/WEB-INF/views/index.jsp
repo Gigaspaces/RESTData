@@ -4,7 +4,7 @@
 <% String ip = InetAddress.getLocalHost().getHostAddress();
    String context = request.getContextPath();
    String spaceNameParam = request.getParameter("spacename");
-   String spaceName = "myDataGrid";
+   String spaceName = "${defaultSpaceName}";
    if (!(spaceNameParam == null || spaceNameParam.equals(""))) {
        spaceName = spaceNameParam;
    }
