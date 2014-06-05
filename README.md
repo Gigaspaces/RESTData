@@ -85,7 +85,7 @@ If the <i>space</i> parameter is not passed, <i>defaultSpaceName</i> defined in 
 
 <p>1.download the project from Github</p>
 
-<p>2.edit "/RESTData/src/main/webapp/WEB-INF/config.properties" to include your space name, for example: <tt>defaultSpaceName=testSpace</tt></p>
+<p>2.edit "/RESTData/src/main/webapp/WEB-INF/config.properties" to include your space name, for example: <tt>defaultSpaceName=myDataGrid</tt></p>
 Note: This is a default space name. You can override it by passing <i>space</i> parameter to the request. 
 
 <p>3.package the project using maven: "mvn package"<br/>
