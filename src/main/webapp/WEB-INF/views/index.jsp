@@ -1,10 +1,19 @@
 <%@page import="java.net.InetAddress"%>
 <%@ page language="java" contentType="text/html; charset=ISO-8859-1"
 	pageEncoding="ISO-8859-1"%>
-<% String ip = InetAddress.getLocalHost().getHostAddress();
+<%@page import="java.io.InputStream" %>
+<%@page import="java.util.Properties" %>
+
+<%
+   InputStream stream = application.getResourceAsStream("/WEB-INF/config.properties");
+   Properties props = new Properties();
+   props.load(stream);
+
+   String ip = InetAddress.getLocalHost().getHostAddress();
    String context = request.getContextPath();
    String spaceNameParam = request.getParameter("spacename");
-   String spaceName = "${defaultSpaceName}";
+   String spaceName = props.getProperty("defaultSpaceName","myDataGrid");
+
    if (!(spaceNameParam == null || spaceNameParam.equals(""))) {
        spaceName = spaceNameParam;
    }
@@ -21,7 +30,7 @@
 	<h1>REST Data (Space API)</h1>
 	<h2>Examples</h2>
 	<h3>follow the steps one by one to experience the whole feature set</h3>
-    Note: The following examples use <i>myDataGrid</i> as space name by passing it as parameter.
+    Note: The following examples use <i>myDataGrid</i> which is defined in the config.properties file as space name by passing it as parameter.
     <form>
         <br/>You can change it here:     <input name="spacename" value="<%=spaceName%>">
         <input type="submit" value="Update this page">
