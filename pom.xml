@@ -13,7 +13,7 @@
         </repository>
     </repositories>
     <properties>
-        <spring-version>3.1.3.RELEASE</spring-version>
+        <spring-version>3.2.4.RELEASE</spring-version>
         <xap-version>9.7.0-10496-RELEASE</xap-version>
     </properties>
     <dependencies>
@@ -38,6 +38,11 @@
         <dependency>
             <groupId>org.springframework</groupId>
             <artifactId>spring-webmvc</artifactId>
+            <version>${spring-version}</version>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework</groupId>
+            <artifactId>spring-beans</artifactId>
             <version>${spring-version}</version>
         </dependency>
         <dependency>
