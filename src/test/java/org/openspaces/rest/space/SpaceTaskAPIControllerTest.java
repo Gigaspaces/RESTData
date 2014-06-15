@@ -20,6 +20,7 @@ import org.springframework.web.servlet.ModelAndView;
 import com.gigaspaces.document.SpaceDocument;
 import com.gigaspaces.metadata.SpaceTypeDescriptorBuilder;
 
+@Ignore
 public class SpaceTaskAPIControllerTest {
 	static UrlSpaceConfigurer sc;
 	static GigaSpace space;  //clustered space proxy
