@@ -2,13 +2,13 @@ package org.openspaces.rest.space;
 
 import static org.junit.Assert.*;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import org.codehaus.jackson.map.ObjectMapper;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import org.junit.Ignore;
 import org.openspaces.core.GigaSpace;
 import org.openspaces.core.GigaSpaceConfigurer;
 import org.openspaces.core.cluster.ClusterInfo;
@@ -21,7 +21,6 @@ import org.springframework.web.servlet.ModelAndView;
 import com.gigaspaces.document.SpaceDocument;
 import com.gigaspaces.metadata.SpaceTypeDescriptorBuilder;
 
-@Ignore
 public class SpaceTaskAPIControllerTest {
 	static UrlSpaceConfigurer sc;
 	static GigaSpace space;  //clustered space proxy
@@ -51,7 +50,7 @@ public class SpaceTaskAPIControllerTest {
 
 		sc=new UrlSpaceConfigurer("jini://localhost/*/space");
 		space=new GigaSpaceConfigurer(sc.space()).gigaSpace().getClustered();
-		
+
     }
 
 	@AfterClass
@@ -65,38 +64,49 @@ public class SpaceTaskAPIControllerTest {
 
 		}
 	}
-	
+
 	/*
 	 * 
 	 * ------------------------    TESTS -----------------------
 	 */
-	
+
 	@Test
 	public void sanityTest() {
 		SpaceTaskAPIController controller=new SpaceTaskAPIController();
 		SpaceTaskRequest body=new SpaceTaskRequest();
-		
+
 		body.language="groovy";
 		body.target="all";
 		body.code="println \"here\";return \"success\";";
 		ModelAndView result=controller.executeTask("space","localhost",body);
 		assertEquals(1,result.getModel().size());
-		
+
 	}
-	
+
 	@Test
 	public void writeToSpaceTest(){
+        space.getTypeManager().registerTypeDescriptor(new SpaceTypeDescriptorBuilder("TestType")
+                .idProperty("id",true).addFixedProperty("val",String.class).create());
 		space.clear(new Object());
-		
+
 		SpaceTaskAPIController controller=new SpaceTaskAPIController();
 		SpaceTaskRequest body=new SpaceTaskRequest();
-		
+
 		body.language="groovy";
 		body.target="all";
-		body.code="gigaSpace.write(new String(\"test\"));return \"success\";";
+        body.code="import com.gigaspaces.document.*;"+
+                "def d = new SpaceDocument(\"TestType\");"+
+                "d.setProperty(\"val\",\"val0\");"+
+                "gigaSpace.write(d);"+
+                "return \"success\";";
+
 		ModelAndView result=controller.executeTask("space","localhost",body);
 		assertEquals(2,space.count(new Object()));
-	}
+        assertEquals(2,((ArrayList)result.getModel().get("results")).size());
+        for (String val : (ArrayList<String>)result.getModel().get("results")) {
+            assertEquals("success", val);
+        }
+    }
 
 	@Test
 	public void readSpaceBroadcastTest(){
@@ -110,10 +120,10 @@ public class SpaceTaskAPIControllerTest {
 		d.setProperty("id",1);
 		d.setProperty("val","val1");
 		space.write(d);
-		
+
 		SpaceTaskAPIController controller=new SpaceTaskAPIController();
 		SpaceTaskRequest body=new SpaceTaskRequest();
-		
+
 		body.language="groovy";
 		body.target="all";
 		body.code="import com.gigaspaces.document.*;"+
@@ -123,7 +133,7 @@ public class SpaceTaskAPIControllerTest {
 		assertEquals(1,result.getModel().size());
 		assertEquals(2,((List)result.getModel().get("results")).size());
 	}
-	
+
 	@Test
 	public void readSpaceSinglePartitionTest(){
 		space.getTypeManager().registerTypeDescriptor(new SpaceTypeDescriptorBuilder("test-type")
@@ -136,10 +146,10 @@ public class SpaceTaskAPIControllerTest {
 		d.setProperty("id",1);
 		d.setProperty("val","val1");
 		space.write(d);
-		
+
 		SpaceTaskAPIController controller=new SpaceTaskAPIController();
 		SpaceTaskRequest body=new SpaceTaskRequest();
-		
+
 		body.language="groovy";
 		body.target=0;
 		body.code="import com.gigaspaces.document.*;"+
@@ -148,7 +158,7 @@ public class SpaceTaskAPIControllerTest {
 		ModelAndView result=controller.executeTask("space","localhost",body);
 		assertEquals(1,result.getModel().size());
 		assertEquals(1,((List)result.getModel().get("results")).size());
-		
+
 		ObjectMapper om=new ObjectMapper();
 		try{
 		 System.out.println(om.writeValueAsString(result.getModel().get("results")));
@@ -156,6 +166,6 @@ public class SpaceTaskAPIControllerTest {
 			e.printStackTrace();
 		}
 	}
-	
+
 }
 
