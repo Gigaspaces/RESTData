@@ -8,6 +8,7 @@ import java.util.List;
 import org.codehaus.jackson.map.ObjectMapper;
 import org.junit.AfterClass;
 import org.junit.BeforeClass;
+import org.junit.Ignore;
 import org.junit.Test;
 import org.openspaces.core.GigaSpace;
 import org.openspaces.core.GigaSpaceConfigurer;
@@ -21,6 +22,7 @@ import org.springframework.web.servlet.ModelAndView;
 import com.gigaspaces.document.SpaceDocument;
 import com.gigaspaces.metadata.SpaceTypeDescriptorBuilder;
 
+@Ignore
 public class SpaceTaskAPIControllerTest {
 	static UrlSpaceConfigurer sc;
 	static GigaSpace space;  //clustered space proxy
