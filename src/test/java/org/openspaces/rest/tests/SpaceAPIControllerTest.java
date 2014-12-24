@@ -44,16 +44,17 @@ public class SpaceAPIControllerTest {
     static {
     	try{
     		locators =InetAddress.getLocalHost().getHostAddress();
-            groups = System.getProperty("com.gs.jini_lus.groups", System.getenv("LOOKUPGROUPS"));
 
-    	}catch(Exception e){}
+        }catch(Exception e){}
+
+        groups = "openspaces-rest";
     }
 
 
     @BeforeClass
     public static void beforeClass(){
         spaceAPIController = new SpaceAPIController();
-        ControllerUtils.spaceName = "embeddedTestSpace";
+        ControllerUtils.spaceName = SPACENAME;
         ControllerUtils.lookupGroups = groups;
         gigaSpace = new GigaSpaceConfigurer(new UrlSpaceConfigurer("/./" + SPACENAME+"?groups="+groups)).gigaSpace();
         registerProductType(gigaSpace);
