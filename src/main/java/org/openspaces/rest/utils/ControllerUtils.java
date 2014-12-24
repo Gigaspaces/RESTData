@@ -15,37 +15,26 @@
  */
 package org.openspaces.rest.utils;
 
-import java.io.BufferedReader;
-import java.lang.reflect.InvocationTargetException;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicReference;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.gigaspaces.internal.utils.StringUtils;
-import net.jini.core.discovery.LookupLocator;
-import org.openspaces.admin.Admin;
-import org.openspaces.admin.AdminFactory;
-import org.openspaces.admin.space.Space;
-import org.openspaces.core.GigaSpace;
-import org.openspaces.core.GigaSpaceConfigurer;
-import org.openspaces.core.space.UrlSpaceConfigurer;
-import org.openspaces.rest.exceptions.TypeNotFoundException;
-import org.springframework.beans.factory.annotation.Autowired;
-import org.springframework.http.converter.HttpMessageNotReadableException;
-
 import com.gigaspaces.document.SpaceDocument;
 import com.gigaspaces.metadata.SpacePropertyDescriptor;
 import com.gigaspaces.metadata.SpaceTypeDescriptor;
 import com.j_spaces.core.UnknownTypeException;
+import org.openspaces.core.GigaSpace;
+import org.openspaces.core.GigaSpaceConfigurer;
+import org.openspaces.core.space.UrlSpaceConfigurer;
+import org.openspaces.rest.exceptions.TypeNotFoundException;
+import org.springframework.http.converter.HttpMessageNotReadableException;
 
-import javax.servlet.ServletContext;
+import java.io.BufferedReader;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * some helper methods to the SpaceApiController class
@@ -57,6 +46,10 @@ public class ControllerUtils {
 	private static final TypeReference<HashMap<String, Object>[]> typeRef = new TypeReference<HashMap<String, Object>[]>() {};
 	private static final ObjectMapper mapper = new ObjectMapper();
 	public static final XapConnectionCache xapCache=new XapConnectionCache();
+
+	public static String spaceName;
+	public static String lookupLocators;
+	public static String lookupGroups;
 
 	public static SpaceDocument[] createSpaceDocuments(String type, BufferedReader reader, GigaSpace gigaSpace)
 			throws TypeNotFoundException {
@@ -216,49 +209,36 @@ public class ControllerUtils {
 		public XapConnectionCache(){
 		}
 
-		public GigaSpace get(ServletContext servletContext){
-			return get(servletContext, false);
-		}
-
-		public GigaSpace get(ServletContext servletContext, boolean forceReconnect){
+		public GigaSpace get(){
 
 			synchronized(cache){
-
 				log.finest("getting space");
-				if (forceReconnect) {
-					cache.set(null); // Clear cache
-				}
+
 				GigaSpace gs=getSpace();
 				if(gs!=null)return gs;
 
-				String lookupGroups = (String) servletContext.getAttribute("lookupGroups");
-				String lookupLocators = (String) servletContext.getAttribute("lookupLocators");
-				String spaceName = servletContext.getInitParameter("spaceName").toString();
 				log.finest("lookupgroups: " + lookupGroups);
 				log.finest("lookupLocators: " + lookupLocators);
 				log.finest("spaceName: "+spaceName);
 				String url="jini://*/*/"+spaceName;
 
-				AdminFactory adminFactory=new AdminFactory().discoverUnmanagedSpaces().useDaemonThreads(true);
 
-				if (lookupGroups!= null || lookupLocators != null) {
+				if ((lookupGroups!= null && lookupGroups.length() > 0) || (lookupLocators != null && lookupLocators.length() > 0)) {
 					//If one of them are not null then append '?' char
 					url+= "?";
 
 					boolean lookupGroupsSetted = false;
 
-					if (lookupGroups != null) {
-						adminFactory.addGroups(lookupGroups);
+					if (lookupGroups != null && lookupGroups.length() > 0) {
 						url += "groups="+lookupGroups;
 						lookupGroupsSetted=true;
 					}
 
-					if (lookupLocators != null) {
+					if (lookupLocators != null && lookupLocators.length() > 0) {
 						if (lookupGroupsSetted) {
 							url += "&";
 						}
 
-						adminFactory.addLocators(lookupLocators);
 						url += "locators="+lookupLocators;
 					}
 				}

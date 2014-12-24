@@ -20,7 +20,7 @@ import org.openspaces.core.space.UrlSpaceConfigurer;
 import org.openspaces.rest.exceptions.ObjectNotFoundException;
 import org.openspaces.rest.exceptions.TypeNotFoundException;
 import org.openspaces.rest.space.SpaceAPIController;
-import org.springframework.mock.web.MockServletContext;
+import org.openspaces.rest.utils.ControllerUtils;
 import org.springframework.web.HttpMediaTypeNotAcceptableException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.servlet.mvc.multiaction.NoSuchRequestHandlingMethodException;
@@ -53,11 +53,8 @@ public class SpaceAPIControllerTest {
     @BeforeClass
     public static void beforeClass(){
         spaceAPIController = new SpaceAPIController();
-        MockServletContext servletContext = new MockServletContext();
-        servletContext.setAttribute("spaceName","embeddedTestSpace");
-        servletContext.setAttribute("lookupGroups",groups);
-
-        spaceAPIController.setServletContext(servletContext);
+        ControllerUtils.spaceName = "embeddedTestSpace";
+        ControllerUtils.lookupGroups = groups;
         gigaSpace = new GigaSpaceConfigurer(new UrlSpaceConfigurer("/./" + SPACENAME+"?groups="+groups)).gigaSpace();
         registerProductType(gigaSpace);
     }
@@ -71,16 +68,17 @@ public class SpaceAPIControllerTest {
     public void testInroduceType() throws Exception {
         String content = "[{\"CatalogNumber\":\"doc1\", \"Category\":\"Hardware\", \"Name\":\"Anvil1\", \"nested\": {\"nestedVar1\":\"nestedValue1\"}}, {\"CatalogNumber\":\"doc2\", \"Category\":\"Hardware\", \"Name\":\"Anvil2\"}]";
         try {
-            String postResult = spaceAPIController.post("MyType", new BufferedReader(new StringReader(content)));
+            Map<String, Object> postResult = spaceAPIController.post("MyType", new BufferedReader(new StringReader(content)));
             Assert.fail("Writing to the space without introducing the class should cause TypeNotFoundException and it didn't");
         } catch (TypeNotFoundException e) {
             //This is the right behavior
         }
         Map<String, Object> introduceTypeResult = spaceAPIController.introduceType("MyType", "CatalogNumber");
-        Assert.assertEquals("ok",introduceTypeResult.get("result"));
+        Assert.assertEquals("success",introduceTypeResult.get("status"));
 
         try {
-            String postResult = spaceAPIController.post("MyType", new BufferedReader(new StringReader(content)));
+            Map<String, Object> postResult = spaceAPIController.post("MyType", new BufferedReader(new StringReader(content)));
+            Assert.assertEquals("Excpecting to get status equals to success", "success", postResult.get("status"));
             // More tests for write are in testGet()
         } catch (TypeNotFoundException e) {
             Assert.fail("Write should not throw TypeNotFoundException after introducing the class");
@@ -117,36 +115,48 @@ public class SpaceAPIControllerTest {
         gigaSpace.write(document2);
 
         //test get by type
-        Map<String, Object>[] resultType = spaceAPIController.getByQuery("Product", "", Integer.MAX_VALUE);
-        Assert.assertEquals(2, resultType.length);
+        Map<String, Object> result = spaceAPIController.getByQuery("Product", "", Integer.MAX_VALUE);
+        Assert.assertEquals("success", result.get("status"));
+        Map<String, Object>[] resultData = (Map<String, Object>[]) result.get("data");
+        Assert.assertEquals(2, resultData.length);
 //        compareMaps(properties1, resultType[0]);
 //        compareMaps(properties2, resultType[1]);
 
         //test get by var1
-        Map<String, Object>[] result = spaceAPIController.getByQuery("Product", "testvar1='value1'", Integer.MAX_VALUE);
+        result = spaceAPIController.getByQuery("Product", "testvar1='value1'", Integer.MAX_VALUE);
+        Assert.assertEquals("success", result.get("status"));
+        resultData = (Map<String, Object>[]) result.get("data");
         
-        Assert.assertEquals(1, result.length);
-        compareMaps(properties1, result[0]);
+        Assert.assertEquals(1, resultData.length);
+        compareMaps(properties1, resultData[0]);
 
         //null size limit
         result = spaceAPIController.getByQuery("Product", "testvar1='value1'", null);
-        Assert.assertEquals(1, result.length);
-        compareMaps(properties1, result[0]);
+        Assert.assertEquals("success", result.get("status"));
+        resultData = (Map<String, Object>[]) result.get("data");
+        Assert.assertEquals(1, resultData.length);
+        compareMaps(properties1, resultData[0]);
 
         //1 size limit
         result = spaceAPIController.getByQuery("Product", "testvar1='value1'", 1);
-        Assert.assertEquals(1, result.length);
-        compareMaps(properties1, result[0]);
+        Assert.assertEquals("success", result.get("status"));
+        resultData = (Map<String, Object>[]) result.get("data");
+        Assert.assertEquals(1, resultData.length);
+        compareMaps(properties1, resultData[0]);
 
         //test get by var2
-        Map<String, Object>[] result2 = spaceAPIController.getByQuery("Product", "testvar2='value2'", Integer.MAX_VALUE);
-        Assert.assertEquals(1, result2.length);
-        compareMaps(properties2, result2[0]);
+        result = spaceAPIController.getByQuery("Product", "testvar2='value2'", Integer.MAX_VALUE);
+        Assert.assertEquals("success", result.get("status"));
+        resultData = (Map<String, Object>[]) result.get("data");
+        Assert.assertEquals(1, resultData.length);
+        compareMaps(properties2, resultData[0]);
 
         //test nested
-        Map<String, Object>[] result3 = spaceAPIController.getByQuery("Product", "nested.nestedVar1='nestedValue1'", Integer.MAX_VALUE);
-        Assert.assertEquals(1, result3.length);
-        compareMaps(properties1, result3[0]);
+        result = spaceAPIController.getByQuery("Product", "nested.nestedVar1='nestedValue1'", Integer.MAX_VALUE);
+        Assert.assertEquals("success", result.get("status"));
+        resultData = (Map<String, Object>[]) result.get("data");
+        Assert.assertEquals(1, resultData.length);
+        compareMaps(properties1, resultData[0]);
 
         //test pojo to document
         Pojo pojo1 = new Pojo();
@@ -155,30 +165,40 @@ public class SpaceAPIControllerTest {
         gigaSpace.write(pojo1);
 
         String pojoClassName = Pojo.class.getName();
-        Map<String, Object>[] result4 = spaceAPIController.getByQuery(pojoClassName, "id='1'", Integer.MAX_VALUE);
-        comparePojoAndProps(pojo1, result4[0]);
+        result = spaceAPIController.getByQuery(pojoClassName, "id='1'", Integer.MAX_VALUE);
+        Assert.assertEquals("success", result.get("status"));
+        resultData = (Map<String, Object>[]) result.get("data");
+        comparePojoAndProps(pojo1, resultData[0]);
 
-        Map<String, Object> result5 = spaceAPIController.getById(pojoClassName, "1");
-        comparePojoAndProps(pojo1, result5);
+        Map<String, Object> resultByID = spaceAPIController.getById(pojoClassName, "1");
+        Assert.assertEquals("success", resultByID.get("status"));
+        Map<String, Object> resultDataById = (Map<String, Object>) resultByID.get("data");
+        comparePojoAndProps(pojo1, resultDataById);
 
-        Map<String, Object> result6 = spaceAPIController.getById("Product", "doc1");
-        compareMaps(properties1, result6);
+        resultByID = spaceAPIController.getById("Product", "doc1");
+        Assert.assertEquals("success", resultByID.get("status"));
+        resultDataById = (Map<String, Object>) resultByID.get("data");
+        compareMaps(properties1, resultDataById);
 
         Pojo2 pojo2 = new Pojo2();
         pojo2.setId(1);
         pojo2.setVal(123L);
         gigaSpace.write(pojo2);
 
-        Map<String, Object> result7 = spaceAPIController.getById(Pojo2.class.getName(), "1");
-        comparePojoAndProps(pojo2, result7);
+        resultByID = spaceAPIController.getById(Pojo2.class.getName(), "1");
+        Assert.assertEquals("success", resultByID.get("status"));
+        resultDataById = (Map<String, Object>) resultByID.get("data");
+        comparePojoAndProps(pojo2, resultDataById);
 
         Pojo3 pojo3 = new Pojo3();
         pojo3.setId(1F);
         pojo3.setVal(123L);
         gigaSpace.write(pojo3);
 
-        Map<String, Object> result8 = spaceAPIController.getById(Pojo3.class.getName(), "1");
-        comparePojoAndProps(pojo3, result8);
+        resultByID = spaceAPIController.getById(Pojo3.class.getName(), "1");
+        Assert.assertEquals("success", resultByID.get("status"));
+        resultDataById = (Map<String, Object>) resultByID.get("data");
+        comparePojoAndProps(pojo3, resultDataById);
     }
 
     @Test
@@ -211,8 +231,10 @@ public class SpaceAPIControllerTest {
         Assert.assertEquals(3, gigaSpace.count(null));
 
         //test delete by type
-        Map<String, Object>[] resultType = spaceAPIController.deleteByQuery("Product", "", Integer.MAX_VALUE);
-        Assert.assertEquals(3, resultType.length);
+        Map<String, Object> result = spaceAPIController.deleteByQuery("Product", "", Integer.MAX_VALUE);
+        Assert.assertEquals("success",result.get("status"));
+        Map<String, Object>[] resultData = (Map<String, Object>[]) result.get("data");
+        Assert.assertEquals(3, resultData.length);
 
         Assert.assertEquals(0, gigaSpace.count(null));
         
@@ -223,18 +245,24 @@ public class SpaceAPIControllerTest {
         Assert.assertEquals(3, gigaSpace.count(null));
         
         //test simple delete
-        Map<String, Object>[] result = spaceAPIController.deleteByQuery("Product", "Name='Anvil1'", Integer.MAX_VALUE);
-        compareMaps(properties1, result[0]);
+        result = spaceAPIController.deleteByQuery("Product", "Name='Anvil1'", Integer.MAX_VALUE);
+        Assert.assertEquals("success",result.get("status"));
+        resultData = (Map<String, Object>[]) result.get("data");
+        compareMaps(properties1, resultData[0]);
         Assert.assertEquals(2, gigaSpace.count(null));
 
         //test nested delete
-        Map<String, Object>[] result2 = spaceAPIController.deleteByQuery("Product", "nested.nestedVar1='nestedValue1'", Integer.MAX_VALUE);
-        compareMaps(properties2, result2[0]);
+        result = spaceAPIController.deleteByQuery("Product", "nested.nestedVar1='nestedValue1'", Integer.MAX_VALUE);
+        Assert.assertEquals("success",result.get("status"));
+        resultData = (Map<String, Object>[]) result.get("data");
+        compareMaps(properties2, resultData[0]);
         Assert.assertEquals(1, gigaSpace.count(null));
 
         //test id-based delete
-        Map<String, Object> result3 = spaceAPIController.deleteById("Product", "doc3");
-        compareMaps(properties3, result3);
+        Map<String, Object> resultById = spaceAPIController.deleteById("Product", "doc3");
+        Assert.assertEquals("success",result.get("status"));
+        Map<String, Object> resultDataById = (Map<String, Object>) resultById.get("data");
+        compareMaps(properties3, resultDataById);
         Assert.assertEquals(0, gigaSpace.count(null));
 
         Pojo pojo1 = new Pojo();
@@ -244,14 +272,18 @@ public class SpaceAPIControllerTest {
         Assert.assertEquals(1, gigaSpace.count(null));
 
         //test delete pojo by id
-        Map<String, Object> result4 = spaceAPIController.deleteById(Pojo.class.getName(), "1");
-        comparePojoAndProps(pojo1, result4);
+        resultById = spaceAPIController.deleteById(Pojo.class.getName(), "1");
+        Assert.assertEquals("success",resultById.get("status"));
+        resultDataById = (Map<String, Object>) resultById.get("data");
+        comparePojoAndProps(pojo1, resultDataById);
         Assert.assertEquals(0, gigaSpace.count(null));
 
         gigaSpace.write(pojo1);
 
-        Map<String, Object>[] result5 = spaceAPIController.deleteByQuery(Pojo.class.getName(), "id='1'", Integer.MAX_VALUE);
-        comparePojoAndProps(pojo1, result5[0]);
+        result = spaceAPIController.deleteByQuery(Pojo.class.getName(), "id='1'", Integer.MAX_VALUE);
+        Assert.assertEquals("success",result.get("status"));
+        resultData = (Map<String, Object>[]) result.get("data");
+        comparePojoAndProps(pojo1, resultData[0]);
         Assert.assertEquals(0, gigaSpace.count(null));
 
         //
@@ -260,7 +292,8 @@ public class SpaceAPIControllerTest {
         pojo2.setVal(123L);
         gigaSpace.write(pojo2);
 
-        spaceAPIController.deleteById(Pojo2.class.getName(), "1");
+        resultById = spaceAPIController.deleteById(Pojo2.class.getName(), "1");
+        Assert.assertEquals("success",resultById.get("status"));
         Assert.assertEquals(0, gigaSpace.count(new Pojo2()));
 
         Pojo3 pojo3 = new Pojo3();
@@ -268,7 +301,8 @@ public class SpaceAPIControllerTest {
         pojo3.setVal(123L);
         gigaSpace.write(pojo3);
 
-        spaceAPIController.deleteById(Pojo3.class.getName(), "1");
+        resultById = spaceAPIController.deleteById(Pojo3.class.getName(), "1");
+        Assert.assertEquals("success",resultById.get("status"));
         Assert.assertEquals(0, gigaSpace.count(new Pojo2()));
     }
 
@@ -292,13 +326,14 @@ public class SpaceAPIControllerTest {
         //test writemultiple
         String content = "[{\"CatalogNumber\":\"doc1\", \"Category\":\"Hardware\", \"Name\":\"Anvil1\", \"nested\": {\"nestedVar1\":\"nestedValue1\"}}, {\"CatalogNumber\":\"doc2\", \"Category\":\"Hardware\", \"Name\":\"Anvil2\"}]";
 
-        String postResult = spaceAPIController.post("Product", new BufferedReader(new StringReader(content)));
-        Assert.assertEquals("success", postResult);
+        Map<String, Object> postResult = spaceAPIController.post("Product", new BufferedReader(new StringReader(content)));
+        Assert.assertEquals("success", postResult.get("status"));
 
         Assert.assertEquals(2, gigaSpace.count(null));
 
         Map<String, Object> countResult = spaceAPIController.count("Product");
-        Assert.assertEquals(2,countResult.get("count"));
+        Assert.assertEquals("success", countResult.get("status"));
+        Assert.assertEquals(2,countResult.get("data"));
 
         SpaceDocument doc1 = gigaSpace.readById(new IdQuery<SpaceDocument>("Product", "doc1",QueryResultType.DOCUMENT));
         compareMaps(properties1, doc1.getProperties());
@@ -315,7 +350,8 @@ public class SpaceAPIControllerTest {
 
         content = "[{\"CatalogNumber\":\"doc1\", \"Category\":\"Hardware\", \"Name\":\"Anvil1new\", \"nested\": {\"nestedVar1\":\"nestedValue1new\"}}, {\"CatalogNumber\":\"doc2\", \"Category\":\"Hardware\", \"Name\":\"Anvil2new\"}]";
         try{
-            spaceAPIController.post("Product", new BufferedReader(new StringReader(content)));
+            Map<String, Object> result = spaceAPIController.post("Product", new BufferedReader(new StringReader(content)));
+            Assert.assertEquals("success", result.get("status"));
         }catch(Exception e){
             Assert.fail("An action should not cause an exception but it did");
         }
@@ -333,7 +369,8 @@ public class SpaceAPIControllerTest {
         pojo2.setVal(123L);
 
         content = "[{\"id\":\"1\", \"val\":\"123\"}]";
-        Assert.assertEquals("success",spaceAPIController.post(Pojo2.class.getName(),new  BufferedReader(new StringReader(content))));
+        Map<String, Object> result = spaceAPIController.post(Pojo2.class.getName(), new BufferedReader(new StringReader(content)));
+        Assert.assertEquals("success", result.get("status"));
 
         SpaceDocument docresult = gigaSpace.readById(new IdQuery<SpaceDocument>(Pojo2.class.getName(), 1,QueryResultType.DOCUMENT));
         comparePojoAndProps(pojo2, docresult.getProperties());
@@ -344,14 +381,15 @@ public class SpaceAPIControllerTest {
         pojo3.setVal(123L);
 
         content = "[{\"id\":\"1\", \"val\":\"123\"}]";
-        Assert.assertEquals("success",spaceAPIController.post(Pojo3.class.getName(),new  BufferedReader(new StringReader(content))));
+        result = spaceAPIController.post(Pojo3.class.getName(),new  BufferedReader(new StringReader(content)));
+        Assert.assertEquals("success", result.get("status"));
 
         SpaceDocument docresult2 = gigaSpace.readById(new IdQuery<SpaceDocument>(Pojo3.class.getName(), 1F,QueryResultType.DOCUMENT));
         comparePojoAndProps(pojo3, docresult2.getProperties());
     }
 
     @Test
-    public void testPut() throws MissingServletRequestParameterException, HttpMediaTypeNotAcceptableException, NoSuchRequestHandlingMethodException, TypeNotFoundException{
+    public void testUpdate() throws MissingServletRequestParameterException, HttpMediaTypeNotAcceptableException, NoSuchRequestHandlingMethodException, TypeNotFoundException{
         Map<String, Object> properties1 = new HashMap<String, Object>();
         properties1.put("CatalogNumber", "doc1");
         properties1.put("Category", "Hardware");
@@ -367,7 +405,8 @@ public class SpaceAPIControllerTest {
 
         String content = "[{\"CatalogNumber\":\"doc1\", \"Category\":\"Hardware\", \"Name\":\"Anvil1\", \"nested\": {\"nestedVar1\":\"nestedValue1\"}}, {\"CatalogNumber\":\"doc2\", \"Category\":\"Hardware\", \"Name\":\"Anvil2\"}]";
 
-        Assert.assertEquals("success", spaceAPIController.post("Product", new BufferedReader(new StringReader(content))));
+        Map<String, Object> result = spaceAPIController.post("Product", new BufferedReader(new StringReader(content)));
+        Assert.assertEquals("success", result.get("status"));
 
         Assert.assertEquals(2, gigaSpace.count(null));
 
@@ -379,7 +418,8 @@ public class SpaceAPIControllerTest {
         properties2.put("Name", "Anvil2new");
 
         content = "[{\"CatalogNumber\":\"doc1\", \"Category\":\"Hardware\", \"Name\":\"Anvil1new\", \"nested\": {\"nestedVar1\":\"nestedValue1new\"}}, {\"CatalogNumber\":\"doc2\", \"Category\":\"Hardware\", \"Name\":\"Anvil2new\"}]";
-        Assert.assertEquals("success",spaceAPIController.post("Product", new BufferedReader(new StringReader(content))));
+        result = spaceAPIController.post("Product", new BufferedReader(new StringReader(content)));
+        Assert.assertEquals("success", result.get("status"));
 
         Assert.assertEquals(2, gigaSpace.count(null));
         SpaceDocument doc1 = gigaSpace.readById(new IdQuery<SpaceDocument>("Product", "doc1",QueryResultType.DOCUMENT));
@@ -395,7 +435,8 @@ public class SpaceAPIControllerTest {
         pojo2.setVal(123L);
 
         content = "[{\"id\":\"1\", \"val\":\"123\"}]";
-        Assert.assertEquals("success",spaceAPIController.post(Pojo2.class.getName(), new BufferedReader(new StringReader(content))));
+        result = spaceAPIController.post(Pojo2.class.getName(), new BufferedReader(new StringReader(content)));
+        Assert.assertEquals("success", result.get("status"));
 
         SpaceDocument docresult = gigaSpace.readById(new IdQuery<SpaceDocument>(Pojo2.class.getName(), 1,QueryResultType.DOCUMENT));
         comparePojoAndProps(pojo2, docresult.getProperties());
@@ -406,7 +447,8 @@ public class SpaceAPIControllerTest {
         pojo3.setVal(123L);
 
         content = "[{\"id\":\"1\", \"val\":\"123\"}]";
-        Assert.assertEquals("success",spaceAPIController.post(Pojo3.class.getName(), new BufferedReader(new StringReader(content))));
+        result = spaceAPIController.post(Pojo3.class.getName(), new BufferedReader(new StringReader(content)));
+        Assert.assertEquals("success", result.get("status"));
 
         SpaceDocument docresult2 = gigaSpace.readById(new IdQuery<SpaceDocument>(Pojo3.class.getName(), 1F,QueryResultType.DOCUMENT));
         comparePojoAndProps(pojo3, docresult2.getProperties());
@@ -435,7 +477,8 @@ public class SpaceAPIControllerTest {
         properties1.put("nestedObj", nestedProps);
 
         String content = "[{\"id\":\"2\", \"val\":\"val2\", \"nestedObj\": {\"id\":\"22\", \"val\":\"123\"}}]";
-        Assert.assertEquals("success",spaceAPIController.post(Pojo.class.getName(), new BufferedReader(new StringReader(content))));
+        Map<String, Object> result = spaceAPIController.post(Pojo.class.getName(), new BufferedReader(new StringReader(content)));
+        Assert.assertEquals("success", result.get("status"));
 
         SpaceDocument doc = gigaSpace.readById(new IdQuery<SpaceDocument>(Pojo.class.getName(), "2",QueryResultType.DOCUMENT));
         compareMaps(properties1, doc.getProperties());
@@ -457,16 +500,21 @@ public class SpaceAPIControllerTest {
         gigaSpace.write(document2);
 
         BufferedReader reader = new BufferedReader(new StringReader("{\"ID\":\"333\", \"Job\":\"WORKER\"}"));
-        Assert.assertEquals("success",spaceAPIController.post("Person", reader));
-        
-        Map<String, Object>[] result = spaceAPIController.getByQuery("Person", "Job='DOCTOR'", Integer.MAX_VALUE);
-        compareMaps(document.getProperties(), result[0]);
+        Map<String, Object> postResult = spaceAPIController.post("Person", reader);
+        Assert.assertEquals("success", postResult.get("status"));
+
+        Map<String, Object> result = spaceAPIController.getByQuery("Person", "Job='DOCTOR'", Integer.MAX_VALUE);
+        Assert.assertEquals("success", result.get("status"));
+        Map<String, Object>[] resultData = (Map<String, Object>[]) result.get("data");
+        compareMaps(document.getProperties(), resultData[0]);
 
         result = spaceAPIController.getByQuery("Person","Job='WORKER'", Integer.MAX_VALUE);
+        Assert.assertEquals("success", result.get("status"));
+        resultData = (Map<String, Object>[]) result.get("data");
         Map<String, Object> expected = new HashMap<String, Object>();
         expected.put("ID", "333");
         expected.put("Job", Job.WORKER);
-        compareMaps(expected, result[0]);
+        compareMaps(expected, resultData[0]);
     }
     
     @Test(expected=TypeNotFoundException.class) 

@@ -16,6 +16,7 @@
 package org.openspaces.rest.space;
 
 
+import com.gigaspaces.client.WriteModifiers;
 import com.gigaspaces.document.SpaceDocument;
 import com.gigaspaces.metadata.SpacePropertyDescriptor;
 import com.gigaspaces.metadata.SpaceTypeDescriptor;
@@ -24,24 +25,24 @@ import com.gigaspaces.query.IdQuery;
 import com.gigaspaces.query.QueryResultType;
 import com.j_spaces.core.UnknownTypeException;
 import com.j_spaces.core.client.SQLQuery;
-import com.j_spaces.core.client.UpdateModifiers;
 import net.jini.core.lease.Lease;
 import org.openspaces.core.GigaSpace;
 import org.openspaces.core.space.CannotFindSpaceException;
 import org.openspaces.rest.exceptions.ObjectNotFoundException;
 import org.openspaces.rest.exceptions.TypeNotFoundException;
 import org.openspaces.rest.utils.ControllerUtils;
-import org.springframework.beans.factory.annotation.Autowired;
+import org.openspaces.rest.utils.ErrorUtils;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataAccessException;
 import org.springframework.http.HttpStatus;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.ModelAndView;
 
-import javax.servlet.ServletContext;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.Writer;
+import java.util.HashMap;
 import java.util.Hashtable;
 import java.util.Map;
 import java.util.logging.Level;
@@ -70,8 +71,32 @@ import java.util.logging.Logger;
  *  POST:
  *  	curl -XPOST -d '[{"id":"1", "data":"testdata", "data2":"common", "nestedData" : {"nestedKey1":"nestedValue1"}}, {"id":"2", "data":"testdata2", "data2":"common", "nestedData" : {"nestedKey2":"nestedValue2"}}, {"id":"3", "data":"testdata3", "data2":"common", "nestedData" : {"nestedKey3":"nestedValue3"}}]' http://localhost:8080/rest/data/Item
  *
- *  PUT:
- *  	curl -XPUT -d '{"id":"1", "data":"testdata", "data2":"commonUpdated", "nestedData" : {"nestedKey1":"nestedValue1Updated"}}' http://192.168.9.47:8080/rest/data/Item
+ *
+ * The response is a json object:
+ *  On Sucess:
+ *      { "status" : "success" }
+ *      If there is a data:
+ *      {
+ *          "status" : "success",
+ *          "data" : {...} or [{...}, {...}]
+ *      }
+ *
+ *  On Failure:
+ *      If Inner error (TypeNotFound/ObjectNotFound) then
+ *      {
+ *          "status" : "error",
+ *          "error": {
+ *              "message": "some error message"
+ *          }
+ *      }
+ *      If it is a XAP exception:
+ *       {
+ *          "status" : "error",
+ *          "error": {
+ *              "java.class" : "the exception's class name",
+ *              "message": "exception.getMessage()"
+ *          }
+ *      }
  *
  * @author rafi
  * @since 8.0
@@ -79,8 +104,22 @@ import java.util.logging.Logger;
 @Controller
 @RequestMapping(value = "/*")
 public class SpaceAPIController {
-    @Autowired
-    private ServletContext servletContext;
+
+    @Value("${spaceName}")
+    public void setSpaceName(String spaceName) {
+        ControllerUtils.spaceName = spaceName;
+    }
+
+    @Value("${lookupGroups}")
+    public void setLookupGroups(String lookupGroups) {
+        ControllerUtils.lookupGroups = lookupGroups;
+    }
+
+    @Value("${lookupLocators}")
+    public void setLookupLocators(String lookupLocators) {
+        ControllerUtils.lookupLocators = lookupLocators;
+    }
+
 
     private static final String QUERY_PARAM = "query";
     private static final String SIZE_PARAM = "size";
@@ -88,15 +127,6 @@ public class SpaceAPIController {
 
     private int maxReturnValues = Integer.MAX_VALUE;
     private static final Logger logger = Logger.getLogger(SpaceAPIController.class.getName());
-
-
-    public void setServletContext(ServletContext servletContext) {
-        this.servletContext = servletContext;
-    }
-
-    public ServletContext getServletContext() {
-        return servletContext;
-    }
 
     /**
      * redirects to index view
@@ -125,7 +155,7 @@ public class SpaceAPIController {
             logger.fine("introducing type: " + type);
         Map<String, Object> result = new Hashtable<String, Object>();
         try {
-            GigaSpace gigaSpace = ControllerUtils.xapCache.get(servletContext);
+            GigaSpace gigaSpace = ControllerUtils.xapCache.get();
             SpaceTypeDescriptor typeDescriptor = gigaSpace.getTypeManager().getTypeDescriptor(type);
             if (typeDescriptor != null) {
                 throw new IllegalStateException("Type: " + type + " is already introduced to space: " + gigaSpace.getName() + "");
@@ -134,10 +164,10 @@ public class SpaceAPIController {
             SpaceTypeDescriptor spaceTypeDescriptor = new SpaceTypeDescriptorBuilder(type).idProperty(spaceID)
                     .routingProperty(spaceID).supportsDynamicProperties(true).create();
             gigaSpace.getTypeManager().registerTypeDescriptor(spaceTypeDescriptor);
-            result.put("result", "ok");
+            result.put("status", "success");
         } catch (IllegalStateException e) {
-            result.put("result", "error");
-            result.put("exceptionMessage", e.getMessage());
+            result.put("status", "error");
+            result.put("error", "{\"message\": \""+ErrorUtils.escapeJSON(e.getMessage())+"\"}");
         }
 
         return result;
@@ -155,7 +185,7 @@ public class SpaceAPIController {
     @RequestMapping(value = "/{type}", method = RequestMethod.GET)
     public
     @ResponseBody
-    Map<String, Object>[] getByQuery(
+    Map<String, Object> getByQuery(
             @PathVariable String type,
             @RequestParam(value = QUERY_PARAM, required = false) String query,
             @RequestParam(value = SIZE_PARAM, required = false) Integer size) throws ObjectNotFoundException {
@@ -166,7 +196,7 @@ public class SpaceAPIController {
             query = ""; //Query all the data
         }
 
-        GigaSpace gigaSpace = ControllerUtils.xapCache.get(servletContext);
+        GigaSpace gigaSpace = ControllerUtils.xapCache.get();
         SQLQuery<SpaceDocument> sqlQuery = new SQLQuery<SpaceDocument>(type, query, QueryResultType.DOCUMENT);
         int maxSize = (size == null ? maxReturnValues : size.intValue());
         SpaceDocument[] docs;
@@ -176,11 +206,15 @@ public class SpaceAPIController {
             throw translateDataAccessException(gigaSpace, e, type);
         }
 
-        Map<String, Object>[] result;
+        Map<String, Object>[] data;
         if (docs == null || docs.length == 0) {
             throw new ObjectNotFoundException("no objects matched the criteria");
         }
-        result = ControllerUtils.createPropertiesResult(docs);
+        data = ControllerUtils.createPropertiesResult(docs);
+
+        Map<String, Object> result = new HashMap<String, Object>();
+        result.put("status", "success");
+        result.put("data", data);
         return result;
     }
 
@@ -200,7 +234,7 @@ public class SpaceAPIController {
     Map<String, Object> getById(
             @PathVariable String type,
             @PathVariable String id) throws ObjectNotFoundException {
-        GigaSpace gigaSpace = ControllerUtils.xapCache.get(servletContext);
+        GigaSpace gigaSpace = ControllerUtils.xapCache.get();
         //read by id request
         Object typedBasedId = getTypeBasedIdObject(gigaSpace, type, id);
         if (logger.isLoggable(Level.FINE))
@@ -216,7 +250,12 @@ public class SpaceAPIController {
         if (doc == null) {
             throw new ObjectNotFoundException("no object matched the criteria");
         }
-        return doc.getProperties();
+
+        Map<String, Object> result = new HashMap<String, Object>();
+        result.put("status","success");
+        result.put("data", doc.getProperties());
+
+        return result;
     }
 
     /**
@@ -228,7 +267,7 @@ public class SpaceAPIController {
     Map<String, Object> count(
             @PathVariable String type) throws ObjectNotFoundException {
 
-        GigaSpace gigaSpace = ControllerUtils.xapCache.get(servletContext);
+        GigaSpace gigaSpace = ControllerUtils.xapCache.get();
         //read by id request
         Integer cnt;
         try {
@@ -241,7 +280,8 @@ public class SpaceAPIController {
             throw new ObjectNotFoundException("no object matched the criteria");
         }
         Map<String, Object> result = new Hashtable<String, Object>();
-        result.put("count", cnt);
+        result.put("status", "success");
+        result.put("data", cnt);
         return result;
     }
 
@@ -278,7 +318,7 @@ public class SpaceAPIController {
             @PathVariable String type,
             @PathVariable String id) throws ObjectNotFoundException {
 
-        GigaSpace gigaSpace = ControllerUtils.xapCache.get(servletContext);
+        GigaSpace gigaSpace = ControllerUtils.xapCache.get();
         //take by id
         Object typedBasedId = getTypeBasedIdObject(gigaSpace, type, id);
         if (logger.isLoggable(Level.FINE))
@@ -293,7 +333,11 @@ public class SpaceAPIController {
         if (doc == null) {
             throw new ObjectNotFoundException("no object matched the criteria");
         }
-        return doc.getProperties();
+
+        Map<String, Object> result = new HashMap<String, Object>();
+        result.put("status","success");
+        result.put("data", doc.getProperties());
+        return result;
     }
 
     /**
@@ -306,14 +350,14 @@ public class SpaceAPIController {
     @RequestMapping(value = "/{type}", method = RequestMethod.DELETE)
     public
     @ResponseBody
-    Map<String, Object>[] deleteByQuery(
+    Map<String, Object> deleteByQuery(
             @PathVariable String type,
             @RequestParam(value = QUERY_PARAM) String query,
             @RequestParam(value = SIZE_PARAM, required = false) Integer size) {
         if (logger.isLoggable(Level.FINE))
             logger.fine("creating take query with type: " + type + " and query: " + query);
 
-        GigaSpace gigaSpace = ControllerUtils.xapCache.get(servletContext);
+        GigaSpace gigaSpace = ControllerUtils.xapCache.get();
         SQLQuery<SpaceDocument> sqlQuery = new SQLQuery<SpaceDocument>(type, query, QueryResultType.DOCUMENT);
         int maxSize = (size == null ? maxReturnValues : size.intValue());
         SpaceDocument[] docs;
@@ -322,7 +366,11 @@ public class SpaceAPIController {
         } catch (DataAccessException e) {
             throw translateDataAccessException(gigaSpace, e, type);
         }
-        return ControllerUtils.createPropertiesResult(docs);
+
+        Map<String, Object> result = new HashMap<String, Object>();
+        result.put("status", "success");
+        result.put("data", ControllerUtils.createPropertiesResult(docs));
+        return result;
     }
 
     /**
@@ -336,16 +384,18 @@ public class SpaceAPIController {
     @RequestMapping(value = "/{type}", method = RequestMethod.POST)
     public
     @ResponseBody
-    String post(
+    Map<String, Object> post(
             @PathVariable String type,
             BufferedReader reader)
             throws TypeNotFoundException {
         if (logger.isLoggable(Level.FINE))
             logger.fine("performing post, type: " + type);
 
-        GigaSpace gigaSpace = ControllerUtils.xapCache.get(servletContext);
-        createAndWriteDocuments(gigaSpace, type, reader, UpdateModifiers.UPDATE_OR_WRITE);
-        return "success";
+        GigaSpace gigaSpace = ControllerUtils.xapCache.get();
+        createAndWriteDocuments(gigaSpace, type, reader, WriteModifiers.UPDATE_OR_WRITE);
+        Map<String, Object> result = new HashMap<String, Object>();
+        result.put("status", "success");
+        return result;
     }
 
     private RuntimeException translateDataAccessException(GigaSpace gigaSpace, DataAccessException e, String type) {
@@ -368,7 +418,7 @@ public class SpaceAPIController {
         if (logger.isLoggable(Level.FINE))
             logger.fine("type descriptor for typeName: " + e.getTypeName() + " not found, returning error response");
 
-        writer.write("{\"error\":\"Type: " + e.getTypeName() + " is not registered in space.\"}");
+        writer.write(ErrorUtils.toJSON("Type: " + e.getTypeName() + " is not registered in space"));
     }
 
 
@@ -384,7 +434,8 @@ public class SpaceAPIController {
         if (logger.isLoggable(Level.FINE))
             logger.fine("space id query has no results, returning error response");
 
-        writer.write("{\"error\":\"Object not found\"}");
+        writer.write(ErrorUtils.toJSON("Object not found"));
+
     }
 
     /**
@@ -400,7 +451,7 @@ public class SpaceAPIController {
         if (logger.isLoggable(Level.WARNING))
             logger.log(Level.WARNING, "received DataAccessException exception", e);
 
-        writer.write("{\"error\":\"Unable to connect to space\"}");
+        writer.write(ErrorUtils.toJSON(e));
     }
 
     @ExceptionHandler(CannotFindSpaceException.class)
@@ -409,7 +460,7 @@ public class SpaceAPIController {
         if (logger.isLoggable(Level.WARNING))
             logger.log(Level.WARNING, "received CannotFindSpaceException exception", e);
 
-        writer.write("{\"error\":\"Cannot find space\", \"more\": \""+e.getMessage()+"\"}");
+        writer.write(ErrorUtils.toJSON(e));
     }
 
     /**
@@ -420,7 +471,7 @@ public class SpaceAPIController {
      * @param updateModifiers
      * @throws TypeNotFoundException
      */
-    private void createAndWriteDocuments(GigaSpace gigaSpace, String type, BufferedReader reader, int updateModifiers)
+    private void createAndWriteDocuments(GigaSpace gigaSpace, String type, BufferedReader reader, WriteModifiers updateModifiers)
             throws TypeNotFoundException {
         logger.info("creating space Documents from payload");
         SpaceDocument[] spaceDocuments = ControllerUtils.createSpaceDocuments(type, reader, gigaSpace);
