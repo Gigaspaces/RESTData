@@ -15,30 +15,26 @@
  */
 package org.openspaces.rest.utils;
 
-import java.io.BufferedReader;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
-import java.util.Map.Entry;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.logging.Level;
-import java.util.logging.Logger;
-
-import org.codehaus.jackson.map.ObjectMapper;
-import org.codehaus.jackson.type.TypeReference;
-import org.openspaces.admin.Admin;
-import org.openspaces.admin.AdminFactory;
-import org.openspaces.admin.space.Space;
+import com.fasterxml.jackson.core.type.TypeReference;
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.gigaspaces.document.SpaceDocument;
+import com.gigaspaces.metadata.SpacePropertyDescriptor;
+import com.gigaspaces.metadata.SpaceTypeDescriptor;
+import com.j_spaces.core.UnknownTypeException;
 import org.openspaces.core.GigaSpace;
 import org.openspaces.core.GigaSpaceConfigurer;
 import org.openspaces.core.space.UrlSpaceConfigurer;
 import org.openspaces.rest.exceptions.TypeNotFoundException;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 
-import com.gigaspaces.document.SpaceDocument;
-import com.gigaspaces.metadata.SpacePropertyDescriptor;
-import com.gigaspaces.metadata.SpaceTypeDescriptor;
-import com.j_spaces.core.UnknownTypeException;
+import java.io.BufferedReader;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
+import java.util.Map.Entry;
+import java.util.concurrent.atomic.AtomicReference;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /**
  * some helper methods to the SpaceApiController class
@@ -51,7 +47,11 @@ public class ControllerUtils {
 	private static final ObjectMapper mapper = new ObjectMapper();
 	public static final XapConnectionCache xapCache=new XapConnectionCache();
 
-	public static SpaceDocument[] createSpaceDocuments(String type, BufferedReader reader, GigaSpace gigaSpace) 
+	public static String spaceName;
+	public static String lookupLocators;
+	public static String lookupGroups;
+
+	public static SpaceDocument[] createSpaceDocuments(String type, BufferedReader reader, GigaSpace gigaSpace)
 			throws TypeNotFoundException {
 		HashMap<String, Object>[] propertyMapArr;
 		try{
@@ -103,7 +103,7 @@ public class ControllerUtils {
 	 * @param gigaSpace
 	 * @return
 	 * @throws UnknownTypeException
-	 * @throws TypeNotFoundException 
+	 * @throws TypeNotFoundException
 	 */
 	private static Map<String, Object> getTypeBasedProperties(String documentType, Map<String, Object> propertyMap, GigaSpace gigaSpace) throws UnknownTypeException, TypeNotFoundException {
 		SpaceTypeDescriptor spaceTypeDescriptor = gigaSpace.getTypeManager().getTypeDescriptor(documentType);
@@ -139,24 +139,24 @@ public class ControllerUtils {
 					String typeName = propDesc.getType().getName();
 					Map<String, Object> nestedObjProps = getTypeBasedProperties(typeName, (Map<String, Object>) oldPropValue, gigaSpace) ;
 					convertedObj = new SpaceDocument(typeName, nestedObjProps);
-                }else if(oldPropValue instanceof List) {
-                    List<Map<String, Object>> oldPropValueList = (List<Map<String, Object>>) oldPropValue;
+				}else if(oldPropValue instanceof List) {
+					List<Map<String, Object>> oldPropValueList = (List<Map<String, Object>>) oldPropValue;
 
-                    int counter = 0;
-                    SpaceDocument[] spaceDocuments = new SpaceDocument[oldPropValueList.size()];
-                    for(Map<String, Object> map : oldPropValueList) {
+					int counter = 0;
+					SpaceDocument[] spaceDocuments = new SpaceDocument[oldPropValueList.size()];
+					for(Map<String, Object> map : oldPropValueList) {
 
-                        SpaceDocument document = new SpaceDocument();
-                        document.setTypeName((String) map.get("typeName"));
-                        document.setVersion((Integer) map.get("version"));
-                        document.setTransient((Boolean) map.get("transient"));
-                        document.addProperties((Map<String, Object>) map.get("properties"));
+						SpaceDocument document = new SpaceDocument();
+						document.setTypeName((String) map.get("typeName"));
+						document.setVersion((Integer) map.get("version"));
+						document.setTransient((Boolean) map.get("transient"));
+						document.addProperties((Map<String, Object>) map.get("properties"));
 
-                        spaceDocuments[counter++] = document;
-                    }
-                    convertedObj = spaceDocuments;
+						spaceDocuments[counter++] = document;
+					}
+					convertedObj = spaceDocuments;
 				}else{
-					convertedObj = convertPropertyToPrimitiveType((String)oldPropValue, propDesc.getType(), propKey);
+					convertedObj = convertPropertyToPrimitiveType(String.valueOf(oldPropValue), propDesc.getType(), propKey);
 				}
 				newPropertyMap.put(propKey, convertedObj);
 			}
@@ -165,25 +165,25 @@ public class ControllerUtils {
 	}
 
 	public static Object convertPropertyToPrimitiveType(String object, Class type, String propKey) throws UnknownTypeException {
-		if (type.equals(Long.class))
+		if (type.equals(Long.class) || type.equals(Long.TYPE))
 			return Long.valueOf(object);
 
-		if (type.equals(Boolean.class))
+		if (type.equals(Boolean.class) || type.equals(Boolean.TYPE))
 			return Boolean.valueOf(object);
 
-		if (type.equals(Integer.class))
+		if (type.equals(Integer.class) || type.equals(Integer.TYPE))
 			return Integer.valueOf(object);
 
-		if (type.equals(Byte.class))
+		if (type.equals(Byte.class) || type.equals(Byte.TYPE))
 			return Byte.valueOf(object);
 
-		if (type.equals(Short.class))
+		if (type.equals(Short.class) || type.equals(Short.TYPE))
 			return Short.valueOf(object);
 
-		if (type.equals(Float.class))
+		if (type.equals(Float.class) || type.equals(Float.TYPE))
 			return Float.valueOf(object);
 
-		if (type.equals(Double.class))
+		if (type.equals(Double.class) || type.equals(Double.TYPE))
 			return Double.valueOf(object);
 
 		if (type.isEnum())
@@ -198,39 +198,55 @@ public class ControllerUtils {
 
 	/**
 	 * Open ended thread safe cache for XAP connections
-	 * 
+	 *
 	 * @author DeWayne
 	 *
 	 */
 	public static class XapConnectionCache{
 		private final Logger log=Logger.getLogger("XapConnectionCache");
-		private static Map<String,XapEndpoint> cache=new ConcurrentHashMap<String,XapEndpoint>();
+		private static AtomicReference<XapEndpoint> cache= new AtomicReference<XapEndpoint>();
 
 		public XapConnectionCache(){
 		}
 
-		public GigaSpace get(String spaceName,String locators){
-			if(spaceName==null || spaceName.length()==0)throw new IllegalArgumentException("invalid (null or 0 length) spacename");
-			if(locators==null || locators.length()==0)throw new IllegalArgumentException("invalid (null or 0 length) locators");
+		public GigaSpace get(){
 
 			synchronized(cache){
-
 				log.finest("getting space");
-				GigaSpace gs=get(spaceName);
+
+				GigaSpace gs=getSpace();
 				if(gs!=null)return gs;
 
-				String url="jini://*/*/"+spaceName+"?locators="+locators;
-				log.finest("  connecting to "+url);
+				log.finest("lookupgroups: " + lookupGroups);
+				log.finest("lookupLocators: " + lookupLocators);
+				log.finest("spaceName: "+spaceName);
+				String url="jini://*/*/"+spaceName;
+
+
+				if ((lookupGroups!= null && lookupGroups.length() > 0) || (lookupLocators != null && lookupLocators.length() > 0)) {
+					//If one of them are not null then append '?' char
+					url+= "?";
+
+					boolean lookupGroupsSetted = false;
+
+					if (lookupGroups != null && lookupGroups.length() > 0) {
+						url += "groups="+lookupGroups;
+						lookupGroupsSetted=true;
+					}
+
+					if (lookupLocators != null && lookupLocators.length() > 0) {
+						if (lookupGroupsSetted) {
+							url += "&";
+						}
+
+						url += "locators="+lookupLocators;
+					}
+				}
+
+				log.info("  connecting to " + url);
 				UrlSpaceConfigurer usc=new UrlSpaceConfigurer(url);
 				gs=new GigaSpaceConfigurer(usc.space()).gigaSpace();
-				log.finest("  got space.  connecting admin");
-				Admin admin=new AdminFactory().addLocators(locators).discoverUnmanagedSpaces().useDaemonThreads(true).create();
-				for(Map.Entry<String,Space> entry:admin.getSpaces().getNames().entrySet()){
-					log.finest("    found space:"+entry.getKey());
-				}
-				log.finest("  admin created, waiting for space:"+spaceName);
-				Space space=admin.getSpaces().waitFor(spaceName);
-				cache.put(spaceName,new XapEndpoint(gs,usc,space.getNumberOfInstances()));
+				cache.set(new XapEndpoint(gs,usc));
 				log.finest("  returning space");
 				return gs;
 			}
@@ -238,35 +254,22 @@ public class ControllerUtils {
 
 		/**
 		 * Gets a space in the cache.  Doesn't open new connections.
-		 * @param spaceName the name of the space to get
 		 * @return GigaSpace if successful.  Null otherwise.
 		 */
-		public GigaSpace get(String spaceName){
-			XapEndpoint ep=cache.get(spaceName);
+		private GigaSpace getSpace(){
+			XapEndpoint ep=cache.get();
 			if(ep==null)return null;
 			return ep.space;
 		}
-
-		public int getInstances(String spaceName){
-			if(spaceName==null || spaceName.length()==0)throw new IllegalArgumentException("null or zero length space name");
-
-			XapEndpoint ep=cache.get(spaceName);
-			if(ep==null)throw new IllegalArgumentException("space name '"+spaceName+"' unknown");
-
-			return ep.instanceCount;
-		}
-
 	}
 
 	private static class XapEndpoint{
 		public GigaSpace space=null;
 		public UrlSpaceConfigurer usc=null;
-		public int instanceCount=0;
 
-		public XapEndpoint(GigaSpace space,UrlSpaceConfigurer usc,int instances){
+		public XapEndpoint(GigaSpace space,UrlSpaceConfigurer usc){
 			this.space=space;
 			this.usc=usc;
-			this.instanceCount=instances;
 		}
 
 	}
