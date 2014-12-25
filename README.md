@@ -43,7 +43,7 @@
 	</ul>
 	</li>
 	<li><font color="#000000">updateMultiple</font><div class="preformatted panel" style="border-width: 1px;"><div class="preformattedContent panelContent">
-<pre>curl -XPUT -H "Content-Type: application/json" -d '[{"id":"1", "data":"testdata", "data2":"commonUpdated", "nestedData" : {"nestedKey1":"nestedValue1"}}, {"id":"2", "data":"testdata2", "data2":"commonUpdated", "nestedData" : {"nestedKey2":"nestedValue2"}}, {"id":"3", "data":"testdata3", "data2":"commonUpdated", "nestedData" : {"nestedKey3":"nestedValue3"}}]' http://localhost:8080/MyObject
+<pre>curl -XPOST -H "Content-Type: application/json" -d '[{"id":"1", "data":"testdata", "data2":"commonUpdated", "nestedData" : {"nestedKey1":"nestedValue1"}}, {"id":"2", "data":"testdata2", "data2":"commonUpdated", "nestedData" : {"nestedKey2":"nestedValue2"}}, {"id":"3", "data":"testdata3", "data2":"commonUpdated", "nestedData" : {"nestedKey3":"nestedValue3"}}]' http://localhost:8080/MyObject
 </pre>
 </div></div>-> see that data2 field is updated: <a href="http://localhost:8080/MyObject/?query=data2='commonUpdated'" rel="nofollow">http://localhost:8080/MyObject/?query=data2='commonUpdated'</a></li>
 </ul>
@@ -51,7 +51,7 @@
 
 <ul>
 	<li>&nbsp;<font color="#000000">single nested update</font><div class="preformatted panel" style="border-width: 1px;"><div class="preformattedContent panelContent">
-<pre>curl -XPUT -H "Content-Type: application/json" -d '{"id":"1", "data":"testdata", "data2":"commonUpdated", "nestedData" : {"nestedKey1":"nestedValue1Updated"}}' http://localhost:8080/MyObject
+<pre>curl -XPOST -H "Content-Type: application/json" -d '{"id":"1", "data":"testdata", "data2":"commonUpdated", "nestedData" : {"nestedKey1":"nestedValue1Updated"}}' http://localhost:8080/MyObject
 </pre>
 </div></div>-> <font color="#000000">see that Item1 nested field is updated:</font><font color="#000000">&nbsp;</font>http://localhost:8080/MyObject/1</li>
 </ul>
