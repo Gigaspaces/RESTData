@@ -76,4 +76,4 @@
 
 <h2><a name="ProjectDocumentation-SetupInstructions"></a>Instructions</h2>
 
-Under Construction
+<a href="http://docs.gigaspaces.com/xap101/rest-service-overview.html">http://docs.gigaspaces.com/xap101/rest-service-overview.html</a>
