@@ -17,6 +17,7 @@ package org.openspaces.rest.utils;
 
 import com.fasterxml.jackson.core.type.TypeReference;
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import com.gigaspaces.document.SpaceDocument;
 import com.gigaspaces.metadata.SpacePropertyDescriptor;
 import com.gigaspaces.metadata.SpaceTypeDescriptor;
@@ -25,12 +26,11 @@ import org.openspaces.core.GigaSpace;
 import org.openspaces.core.GigaSpaceConfigurer;
 import org.openspaces.core.space.UrlSpaceConfigurer;
 import org.openspaces.rest.exceptions.TypeNotFoundException;
+import org.openspaces.rest.exceptions.UnsupportedTypeException;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 
 import java.io.BufferedReader;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 import java.util.Map.Entry;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.logging.Level;
@@ -44,12 +44,36 @@ import java.util.logging.Logger;
 public class ControllerUtils {
 	private static final Logger logger = Logger.getLogger(ControllerUtils.class.getName());
 	private static final TypeReference<HashMap<String, Object>[]> typeRef = new TypeReference<HashMap<String, Object>[]>() {};
-	private static final ObjectMapper mapper = new ObjectMapper();
+	public static final ObjectMapper mapper = new ObjectMapper();
 	public static final XapConnectionCache xapCache=new XapConnectionCache();
 
 	public static String spaceName;
 	public static String lookupLocators;
 	public static String lookupGroups;
+
+	public static Map<String, Class> javaPrimitives = new HashMap<String, Class>();
+
+	public static ArrayList<String> allowedFields;
+
+	static {
+		//Java objects
+		javaPrimitives.put("int32", Integer.class);
+		javaPrimitives.put("int64", Long.class);
+		javaPrimitives.put("double", Double.class);
+		javaPrimitives.put("number", Double.class);
+		javaPrimitives.put("float", Float.class);
+		javaPrimitives.put("boolean", Boolean.class);
+		javaPrimitives.put("string", String.class);
+		javaPrimitives.put("datetime", java.util.Date.class);
+		javaPrimitives.put("array", java.util.List.class);
+		javaPrimitives.put("set", java.util.Set.class);
+		javaPrimitives.put("sortedset", java.util.SortedSet.class);
+		javaPrimitives.put("object", SpaceDocument.class);
+
+		allowedFields = new ArrayList<String>(Arrays.asList("idProperty", "routingProperty", "fixedProperties", "compoundIndex", "fifoSupport", "blobStoreEnabled", "storageType", "supportsOptimisticLocking", "supportsDynamicProperties"));
+
+		mapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
+	}
 
 	public static SpaceDocument[] createSpaceDocuments(String type, BufferedReader reader, GigaSpace gigaSpace)
 			throws TypeNotFoundException {
@@ -76,14 +100,8 @@ public class ControllerUtils {
 		}
 		SpaceDocument[] documents = new SpaceDocument[propertyMapArr.length];
 		for (int i = 0; i < propertyMapArr.length; i++) {
-			try {
 				Map<String, Object> typeBasedProperties = getTypeBasedProperties(type, propertyMapArr[i], gigaSpace);
 				documents[i] = new SpaceDocument(type, typeBasedProperties);
-			} catch (UnknownTypeException e) {
-				logger.log(Level.SEVERE,"could not convert properties based on type", e);
-				//cancel previous documents and return null ( do not write anything to space)
-				return null;
-			}
 		}
 		return documents;
 	}
@@ -105,7 +123,7 @@ public class ControllerUtils {
 	 * @throws UnknownTypeException
 	 * @throws TypeNotFoundException
 	 */
-	private static Map<String, Object> getTypeBasedProperties(String documentType, Map<String, Object> propertyMap, GigaSpace gigaSpace) throws UnknownTypeException, TypeNotFoundException {
+	private static Map<String, Object> getTypeBasedProperties(String documentType, Map<String, Object> propertyMap, GigaSpace gigaSpace) throws TypeNotFoundException {
 		SpaceTypeDescriptor spaceTypeDescriptor = gigaSpace.getTypeManager().getTypeDescriptor(documentType);
 		if (spaceTypeDescriptor == null){
 			throw new TypeNotFoundException(documentType);
@@ -119,7 +137,7 @@ public class ControllerUtils {
 	@SuppressWarnings("unchecked")
 	private static Map<String, Object> buildTypeBasedProperties(
 			Map<String, Object> propertyMap,
-			SpaceTypeDescriptor spaceTypeDescriptor, GigaSpace gigaSpace) throws UnknownTypeException, TypeNotFoundException {
+			SpaceTypeDescriptor spaceTypeDescriptor, GigaSpace gigaSpace) throws TypeNotFoundException {
 		HashMap<String, Object> newPropertyMap = new HashMap<String, Object>();
 		for(Entry<String, Object> entry : propertyMap.entrySet()){
 			String propKey = entry.getKey();
@@ -135,10 +153,17 @@ public class ControllerUtils {
             }*/
 			else{
 				Object convertedObj;
-				if (oldPropValue instanceof Map){
-					String typeName = propDesc.getType().getName();
-					Map<String, Object> nestedObjProps = getTypeBasedProperties(typeName, (Map<String, Object>) oldPropValue, gigaSpace) ;
-					convertedObj = new SpaceDocument(typeName, nestedObjProps);
+				if (oldPropValue instanceof Map){ //SpaceDocument
+					Map obj = (Map) oldPropValue;
+					SpaceDocument sp = new SpaceDocument();
+					sp.setTypeName((String) obj.get("typeName"));
+					if (obj.get("version") != null)
+						sp.setVersion((Integer) obj.get("version"));
+					if (obj.get("transient") != null)
+						sp.setTransient((Boolean) obj.get("transient"));
+					sp.addProperties((Map<String, Object>) obj.get("properties"));
+					convertedObj = sp;
+
 				}else if(oldPropValue instanceof List) {
 					List<Map<String, Object>> oldPropValueList = (List<Map<String, Object>>) oldPropValue;
 
@@ -148,15 +173,21 @@ public class ControllerUtils {
 
 						SpaceDocument document = new SpaceDocument();
 						document.setTypeName((String) map.get("typeName"));
-						document.setVersion((Integer) map.get("version"));
-						document.setTransient((Boolean) map.get("transient"));
+						if (map.get("version") != null)
+							document.setVersion((Integer) map.get("version"));
+						if (map.get("transient") != null)
+							document.setTransient((Boolean) map.get("transient"));
 						document.addProperties((Map<String, Object>) map.get("properties"));
 
 						spaceDocuments[counter++] = document;
 					}
 					convertedObj = spaceDocuments;
 				}else{
-					convertedObj = convertPropertyToPrimitiveType(String.valueOf(oldPropValue), propDesc.getType(), propKey);
+					try {
+						convertedObj = convertPropertyToPrimitiveType(String.valueOf(oldPropValue), propDesc.getType(), propKey);
+					} catch (UnsupportedTypeException e) {
+						convertedObj = oldPropValue;
+					}
 				}
 				newPropertyMap.put(propKey, convertedObj);
 			}
@@ -164,7 +195,7 @@ public class ControllerUtils {
 		return newPropertyMap;
 	}
 
-	public static Object convertPropertyToPrimitiveType(String object, Class type, String propKey) throws UnknownTypeException {
+	public static Object convertPropertyToPrimitiveType(String object, Class type, String propKey) {
 		if (type.equals(Long.class) || type.equals(Long.TYPE))
 			return Long.valueOf(object);
 
@@ -193,7 +224,7 @@ public class ControllerUtils {
 			return String.valueOf(object);
 
 		//unknown type
-		throw new UnknownTypeException("non primitive type when converting property", type.getName());
+		throw new UnsupportedTypeException("Non primitive type when converting property ["+propKey+"]:" +type);
 	}
 
 	/**
