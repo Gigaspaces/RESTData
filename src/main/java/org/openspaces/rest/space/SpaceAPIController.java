@@ -106,7 +106,7 @@ import java.util.logging.Logger;
  * @since 8.0
  */
 @Controller
-@RequestMapping(value = "/space/*")
+@RequestMapping(value = "/*")
 @Api(name = "Space API", description = "Methods for managing cities")
 public class SpaceAPIController {
 
@@ -142,10 +142,10 @@ public class SpaceAPIController {
      *
      * @return
      */
-    @RequestMapping(value = "/", method = RequestMethod.GET)
+    /*@RequestMapping(value = "/", method = RequestMethod.GET)
     public ModelAndView redirectToIndex() {
         return new ModelAndView("index");
-    }
+    }*/
 
 
     /**
@@ -154,7 +154,7 @@ public class SpaceAPIController {
      * @param type type name
      * @return
      */
-    @RequestMapping(value = "/space/{type}/_introduce_type", method = RequestMethod.GET)
+    @RequestMapping(value = "/{type}/_introduce_type", method = RequestMethod.GET)
     public
     @ResponseBody
     Map<String, Object> introduceType(
@@ -194,7 +194,7 @@ public class SpaceAPIController {
     }
 
     @ApiMethod(
-            path="/space/{type}/_introduce_type",
+            path="/{type}/_introduce_type",
             verb= ApiVerb.PUT,
             description="Introduces the specified type to the space with the provided description in the body"
     )
@@ -522,7 +522,7 @@ public class SpaceAPIController {
      * @throws ObjectNotFoundException
      */
     @ApiMethod(
-            path="/space/{type}/",
+            path="/{type}/",
             verb= ApiVerb.GET,
             description="Read multiple entries from space that matches the query."
     )
@@ -582,7 +582,7 @@ public class SpaceAPIController {
      * @throws UnknownTypeException
      */
     @ApiMethod(
-            path="/space/{type}/{id}",
+            path="/{type}/{id}",
             verb= ApiVerb.GET,
             description="Read entry from space with the provided id",
             produces = { MediaType.APPLICATION_JSON_VALUE }
@@ -638,7 +638,7 @@ public class SpaceAPIController {
      * REST COUNT request handler
      */
     @ApiMethod(
-            path="/space/{type}/count",
+            path="/{type}/count",
             verb= ApiVerb.GET,
             description="Returns the number of entries in space of the specified type\n"
     )
@@ -695,7 +695,7 @@ public class SpaceAPIController {
      * @throws ObjectNotFoundException
      */
     @ApiMethod(
-            path="/space/{type}/{id}",
+            path="/{type}/{id}",
             verb= ApiVerb.DELETE,
             description="Gets and deletes the entry from space with the provided id."
     )
@@ -748,7 +748,7 @@ public class SpaceAPIController {
      * @return
      */
     @ApiMethod(
-            path="/space/{type}/",
+            path="/{type}/",
             verb= ApiVerb.DELETE,
             description="Gets and deletes entries from space that matches the query."
     )
@@ -804,7 +804,7 @@ public class SpaceAPIController {
      * @throws TypeNotFoundException
      */
     @ApiMethod(
-            path="/space/{type}/",
+            path="/{type}/",
             verb= ApiVerb.POST,
             description="Write one or more entries to the space."
     )

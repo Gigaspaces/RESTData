@@ -91,6 +91,11 @@ table td {
 <!--[if lt IE 9]>
       <script src="http://html5shim.googlecode.com/svn/trunk/html5.js"></script>
     <![endif]-->
+	<script>
+		$(document).ready(function() {
+			$("button[id='getDocButton']").click();
+		})
+	</script>
 </head>
 
 <body>
@@ -102,7 +107,7 @@ table td {
     		</div>
     		<form class="navbar-form navbar-left col-md-8" role="search">
 				<div class="form-group">
-		        	<input id="jsondocfetch" type="text" class="form-control" style="width:350px" placeholder="Insert here the JSONDoc URL" value="${jsondoc.path}" autocomplete="off">
+		        	<input id="jsondocfetch" type="text" class="form-control" style="width:350px" placeholder="Insert here the JSONDoc URL" value="http://localhost:8888/jsondoc" autocomplete="off">
 		        </div>
 		        <button id="getDocButton" class="btn btn-default">Get documentation</button>
 		    </form>

@@ -20,7 +20,6 @@
 				<prop key="spaceName">#{(servletContext.getInitParameter("spaceName") == null ? "" : servletContext.getInitParameter("spaceName"))}</prop>
 				<prop key="lookupLocators">#{(servletContext.getInitParameter("lookupLocators") == null ? "" : servletContext.getInitParameter("lookupLocators"))}</prop>
 				<prop key="lookupGroups">#{(servletContext.getInitParameter("lookupGroups") == null ? "" : servletContext.getInitParameter("lookupGroups"))}</prop>
-				<prop key="jsondoc.path">http://localhost:8888/jsondoc</prop>
 			</props>
 		</property>
 	</bean>
@@ -65,8 +64,9 @@
 		<property name="suffix" value=".jsp" />
 	</bean>
 
-	<mvc:view-controller path="/" view-name="index" />
-	<mvc:view-controller path="/api" view-name="jsondoc" />
+	<!--<mvc:view-controller path="/" view-name="index" />-->
+	<mvc:view-controller path="/" view-name="jsondoc" />
+	<!--<mvc:view-controller path="/jsondoc" view-name="jsondoc.jsp" />-->
 	<mvc:resources location="/resources/" mapping="/resources/**" order="-1" />
 
 </beans>
