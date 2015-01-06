@@ -20,14 +20,26 @@
 				<prop key="spaceName">#{(servletContext.getInitParameter("spaceName") == null ? "" : servletContext.getInitParameter("spaceName"))}</prop>
 				<prop key="lookupLocators">#{(servletContext.getInitParameter("lookupLocators") == null ? "" : servletContext.getInitParameter("lookupLocators"))}</prop>
 				<prop key="lookupGroups">#{(servletContext.getInitParameter("lookupGroups") == null ? "" : servletContext.getInitParameter("lookupGroups"))}</prop>
+				<prop key="jsondoc.path">http://localhost:8888/jsondoc</prop>
 			</props>
 		</property>
 	</bean>
 
 	<mvc:annotation-driven />
-	<mvc:resources mapping="/resources/**" location="resources/" />
 
-	<context:component-scan base-package="org.openspaces.rest.space" />
+	<context:component-scan base-package="org.openspaces.rest" />
+
+	<bean id="documentationController" class="org.jsondoc.springmvc.controller.JSONDocController">
+		<property name="version" value="1.0" />
+		<property name="basePath" value="http://localhost:8888/" />
+		<property name="packages">
+			<list>
+				<value>org.openspaces.rest.space</value> <!-- put here packages in which you have your spring controllers -->
+				<value>org.openspaces.rest.utils</value> <!-- put here packages in which you have your spring controllers -->
+			</list>
+		</property>
+	</bean>
+
 
 	<bean
 		class="org.springframework.web.servlet.mvc.annotation.DefaultAnnotationHandlerMapping" />
@@ -54,6 +66,7 @@
 	</bean>
 
 	<mvc:view-controller path="/" view-name="index" />
-	<mvc:resources location="/resources/" mapping="/resources/*" order="-1" />
+	<mvc:view-controller path="/api" view-name="jsondoc" />
+	<mvc:resources location="/resources/" mapping="/resources/**" order="-1" />
 
 </beans>

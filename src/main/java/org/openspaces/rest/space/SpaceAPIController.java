@@ -28,14 +28,19 @@ import com.gigaspaces.query.IdQuery;
 import com.j_spaces.core.UnknownTypeException;
 import com.j_spaces.core.client.SQLQuery;
 import net.jini.core.lease.Lease;
+import org.jsondoc.core.annotation.*;
+import org.jsondoc.core.pojo.ApiParamType;
+import org.jsondoc.core.pojo.ApiVerb;
 import org.openspaces.core.GigaSpace;
 import org.openspaces.core.space.CannotFindSpaceException;
 import org.openspaces.rest.exceptions.*;
 import org.openspaces.rest.utils.ControllerUtils;
 import org.openspaces.rest.utils.ErrorUtils;
+import org.openspaces.rest.utils.ReturnedObject;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataAccessException;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.MediaType;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.ModelAndView;
@@ -101,8 +106,11 @@ import java.util.logging.Logger;
  * @since 8.0
  */
 @Controller
-@RequestMapping(value = "/*")
+@RequestMapping(value = "/space/*")
+@Api(name = "Space API", description = "Methods for managing cities")
 public class SpaceAPIController {
+
+    private static final String TYPE_DESCRIPTION = "The type name";
 
     @Value("${spaceName}")
     public void setSpaceName(String spaceName) {
@@ -121,10 +129,10 @@ public class SpaceAPIController {
 
 
     private static final String QUERY_PARAM = "query";
-    private static final String SIZE_PARAM = "max";
+    private static final String MAX_PARAM = "max";
     private static final String SPACEID_PARAM = "spaceid";
 
-    private int maxReturnValues = Integer.MAX_VALUE;
+    private static int maxReturnValues = Integer.MAX_VALUE;
     private static final Logger logger = Logger.getLogger(SpaceAPIController.class.getName());
 
     private static Object emptyObject = new Object();
@@ -141,12 +149,12 @@ public class SpaceAPIController {
 
 
     /**
-     * REST GET for inroducing type to space
+     * REST GET for introducing type to space
      *
      * @param type type name
      * @return
      */
-    @RequestMapping(value = "/{type}/_introduce_type", method = RequestMethod.GET)
+    @RequestMapping(value = "/space/{type}/_introduce_type", method = RequestMethod.GET)
     public
     @ResponseBody
     Map<String, Object> introduceType(
@@ -185,12 +193,18 @@ public class SpaceAPIController {
         return node == null ? null : node.asBoolean();
     }
 
+    @ApiMethod(
+            path="/space/{type}/_introduce_type",
+            verb= ApiVerb.PUT,
+            description="Introduces the specified type to the space with the provided description in the body"
+    )
     @RequestMapping(value = "/{type}/_introduce_type", method = RequestMethod.PUT)
     public
     @ResponseBody
+    @ApiResponseObject
     Map<String, Object> introduceTypeAdvanced(
-            @PathVariable String type,
-            @RequestBody(required = false) String requestBody
+            @PathVariable @ApiParam(name = "type", description = TYPE_DESCRIPTION, paramType = ApiParamType.PATH)String type,
+            @RequestBody(required = false) @ApiBodyObject String requestBody
     ) {
         if (logger.isLoggable(Level.FINE))
             logger.fine("introducing type: " + type);
@@ -507,13 +521,21 @@ public class SpaceAPIController {
      * @return
      * @throws ObjectNotFoundException
      */
+    @ApiMethod(
+            path="/space/{type}/",
+            verb= ApiVerb.GET,
+            description="Read multiple entries from space that matches the query."
+    )
     @RequestMapping(value = "/{type}", method = RequestMethod.GET)
     public
     @ResponseBody
+    @ApiResponseObject
     Map<String, Object> getByQuery(
-            @PathVariable String type,
-            @RequestParam(value = QUERY_PARAM, required = false) String query,
-            @RequestParam(value = SIZE_PARAM, required = false) Integer size) throws ObjectNotFoundException {
+            @PathVariable @ApiParam(name = "type", description = TYPE_DESCRIPTION, paramType = ApiParamType.PATH) String type,
+            @RequestParam(value = QUERY_PARAM, required = false)
+            @ApiParam(name="query", description = "a SQLQuery that is a SQL-like syntax", paramType = ApiParamType.QUERY)String query,
+            @RequestParam(value = MAX_PARAM, required = false)
+            @ApiParam(name="size", clazz = Integer.class, description = "", paramType = ApiParamType.QUERY)Integer size) throws ObjectNotFoundException {
         if (logger.isLoggable(Level.FINE))
             logger.fine("creating read query with type: " + type + " and query: " + query);
 
@@ -559,12 +581,19 @@ public class SpaceAPIController {
      * @throws ObjectNotFoundException
      * @throws UnknownTypeException
      */
-    @RequestMapping(value = "/{type}/{id}", method = RequestMethod.GET)
+    @ApiMethod(
+            path="/space/{type}/{id}",
+            verb= ApiVerb.GET,
+            description="Read entry from space with the provided id",
+            produces = { MediaType.APPLICATION_JSON_VALUE }
+    )
+    @RequestMapping(value = "/{type}/{id}", method = RequestMethod.GET, produces = { MediaType.APPLICATION_JSON_VALUE })
     public
     @ResponseBody
-    Map<String, Object> getById(
-            @PathVariable String type,
-            @PathVariable String id) throws ObjectNotFoundException {
+    @ApiResponseObject
+    ReturnedObject getById(
+            @PathVariable @ApiParam(name = "type", paramType = ApiParamType.PATH, description = TYPE_DESCRIPTION)String type,
+            @PathVariable @ApiParam(name = "id", paramType = ApiParamType.PATH) String id) throws ObjectNotFoundException {
         GigaSpace gigaSpace = ControllerUtils.xapCache.get();
         //read by id request
         Object typedBasedId = getTypeBasedIdObject(gigaSpace, type, id);
@@ -586,24 +615,39 @@ public class SpaceAPIController {
             Map<String, Object> result = new LinkedHashMap<String, Object>();
             result.put("status", "success");
             result.put("data", ControllerUtils.mapper.readValue(ControllerUtils.mapper.writeValueAsString(doc), LinkedHashMap.class));
-            return result;
+            //return result;
+            ReturnedObject obj = new ReturnedObject();
+            obj.setData(result.get("data"));
+            obj.setStatus((String)result.get("status"));
+            return obj;
         } catch (IOException e) {
             Map<String, Object> result = new HashMap<String, Object>();
             result.put("status", "error");
             Map<String, Object> error = new HashMap<String, Object>();
             error.put("message", ErrorUtils.escapeJSON(e.getMessage()));
             result.put("error", error);
-            return result;
+            ReturnedObject obj = new ReturnedObject();
+            obj.setData(result.get("error"));
+            obj.setStatus((String)result.get("status"));
+            return obj;
+            //eturn result;
         }
     }
 
     /**
      * REST COUNT request handler
      */
+    @ApiMethod(
+            path="/space/{type}/count",
+            verb= ApiVerb.GET,
+            description="Returns the number of entries in space of the specified type\n"
+    )
     @RequestMapping(value = "/{type}/count", method = RequestMethod.GET)
     public
     @ResponseBody
+    @ApiResponseObject
     Map<String, Object> count(
+            @ApiParam(name = "type", paramType = ApiParamType.PATH, description = TYPE_DESCRIPTION)
             @PathVariable String type) throws ObjectNotFoundException {
 
         GigaSpace gigaSpace = ControllerUtils.xapCache.get();
@@ -650,11 +694,19 @@ public class SpaceAPIController {
      * @return
      * @throws ObjectNotFoundException
      */
+    @ApiMethod(
+            path="/space/{type}/{id}",
+            verb= ApiVerb.DELETE,
+            description="Gets and deletes the entry from space with the provided id."
+    )
     @RequestMapping(value = "/{type}/{id}", method = RequestMethod.DELETE)
     public
     @ResponseBody
+    @ApiResponseObject
     Map<String, Object> deleteById(
+            @ApiParam(name = "type", description = TYPE_DESCRIPTION, paramType = ApiParamType.PATH)
             @PathVariable String type,
+            @ApiParam(name = "id", paramType = ApiParamType.PATH)
             @PathVariable String id) throws ObjectNotFoundException {
 
         GigaSpace gigaSpace = ControllerUtils.xapCache.get();
@@ -695,19 +747,28 @@ public class SpaceAPIController {
      * @param query
      * @return
      */
+    @ApiMethod(
+            path="/space/{type}/",
+            verb= ApiVerb.DELETE,
+            description="Gets and deletes entries from space that matches the query."
+    )
     @RequestMapping(value = "/{type}", method = RequestMethod.DELETE)
     public
     @ResponseBody
+    @ApiResponseObject
     Map<String, Object> deleteByQuery(
+            @ApiParam(name = "type", description = TYPE_DESCRIPTION, paramType = ApiParamType.PATH)
             @PathVariable String type,
+            @ApiParam(name = "query", paramType = ApiParamType.QUERY)
             @RequestParam(value = QUERY_PARAM) String query,
-            @RequestParam(value = SIZE_PARAM, required = false) Integer size) {
+            @ApiParam(name = "max", description = "The maximum number of entries to return. Default is Integer.MAX_VALUE", paramType = ApiParamType.QUERY)
+            @RequestParam(value = MAX_PARAM, required = false) Integer max) {
         if (logger.isLoggable(Level.FINE))
             logger.fine("creating take query with type: " + type + " and query: " + query);
 
         GigaSpace gigaSpace = ControllerUtils.xapCache.get();
         SQLQuery<Object> sqlQuery = new SQLQuery<Object>(type, query);
-        int maxSize = (size == null ? maxReturnValues : size.intValue());
+        int maxSize = (max == null ? maxReturnValues : max.intValue());
         Object[] docs;
         try {
             docs = gigaSpace.takeMultiple(sqlQuery, maxSize);
@@ -742,10 +803,17 @@ public class SpaceAPIController {
      * @return
      * @throws TypeNotFoundException
      */
+    @ApiMethod(
+            path="/space/{type}/",
+            verb= ApiVerb.POST,
+            description="Write one or more entries to the space."
+    )
     @RequestMapping(value = "/{type}", method = RequestMethod.POST)
     public
     @ResponseBody
+    @ApiResponseObject
     Map<String, Object> post(
+            @ApiParam(name = "type", description = TYPE_DESCRIPTION, paramType = ApiParamType.PATH)
             @PathVariable String type,
             BufferedReader reader)
             throws TypeNotFoundException {

@@ -6,18 +6,45 @@
     <packaging>war</packaging>
     <version>10.1.0-12589-490-SNAPSHOT</version>
     <name>RESTData</name>
-    <repositories>
+<!--    <repositories>
         <repository>
             <id>org.openspaces</id>
             <url>http://maven-repository.openspaces.org</url>
         </repository>
-    </repositories>
+    </repositories>-->
     <properties>
         <spring-version>4.1.1.RELEASE</spring-version>
         <gsVersion>10.1.0-SNAPSHOT</gsVersion>
         <exclude.tests>nothing-to-exclude</exclude.tests>
     </properties>
     <dependencies>
+        <dependency>
+            <groupId>org.jsondoc</groupId>
+            <artifactId>jsondoc-core</artifactId>
+            <version>1.0.9</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>log4j</groupId>
+                    <artifactId>log4j</artifactId>
+                </exclusion>
+
+            </exclusions>
+        </dependency>
+        <dependency>
+            <groupId>org.jsondoc</groupId>
+            <artifactId>jsondoc-springmvc</artifactId>
+            <version>1.0.9</version>
+            <exclusions>
+                <exclusion>
+                    <groupId>log4j</groupId>
+                    <artifactId>log4j</artifactId>
+                </exclusion>
+                <exclusion>
+                    <groupId>org.codehaus.jackson</groupId>
+                    <artifactId>jackson-mapper-asl</artifactId>
+                </exclusion>
+            </exclusions>
+        </dependency>
         <dependency>
             <groupId>junit</groupId>
             <artifactId>junit</artifactId>
@@ -109,6 +136,19 @@
     </dependencies>
     <build>
         <plugins>
+            <plugin>
+                <groupId>org.jsondoc</groupId>
+                <artifactId>jsondoc-maven-plugin</artifactId>
+                <version>1.0.9</version>
+                <configuration>
+                    <version>1.1</version>
+                    <basePath>http://localhost:8888/api</basePath>
+                    <packages>
+                        <package>org.openspaces.core</package>
+                    </packages>
+                    <outputFile>/tmp/jsondoc.json</outputFile>
+                </configuration>
+            </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>

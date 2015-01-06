@@ -1,3 +1,4 @@
+/*
 package org.openspaces.rest.tests;
 import java.io.BufferedReader;
 import java.io.StringReader;
@@ -616,8 +617,10 @@ public class SpaceAPIControllerTest {
             e.printStackTrace();
             Assert.fail("Error with comparePojoAndProps: "+ e.getMessage());
         }
-        /*assertEquals(pojo.getId(), resultMap.get("id"));
-        assertEquals(pojo.getVal(), resultMap.get("val"));*/
+        */
+/*assertEquals(pojo.getId(), resultMap.get("id"));
+        assertEquals(pojo.getVal(), resultMap.get("val"));*//*
+
     }
     
     private static void registerProductType(GigaSpace gigaspace) {
@@ -657,3 +660,4 @@ public class SpaceAPIControllerTest {
     }
 
 }
+*/
