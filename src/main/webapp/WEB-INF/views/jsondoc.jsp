@@ -1,4 +1,10 @@
+<%@ page import="java.net.InetAddress" %>
 <%@ page language="java" pageEncoding="UTF-8" contentType="text/html;charset=utf-8" %>
+<%
+	String ip = InetAddress.getLoopbackAddress().getHostName();
+	Integer port = request.getServerPort();
+	String basePath = "http://"+ip+":"+port;
+%>
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -107,7 +113,7 @@ table td {
     		</div>
     		<form class="navbar-form navbar-left col-md-8" role="search">
 				<div class="form-group">
-		        	<input id="jsondocfetch" type="text" class="form-control" style="width:350px" placeholder="Insert here the JSONDoc URL" value="http://localhost:8888/jsondoc" autocomplete="off">
+		        	<input id="jsondocfetch" type="text" class="form-control" style="width:350px" placeholder="Insert here the JSONDoc URL" value="http://<%=ip%>:<%=port%>/jsondoc" autocomplete="off">
 		        </div>
 		        <button id="getDocButton" class="btn btn-default">Get documentation</button>
 		    </form>
@@ -136,7 +142,7 @@ table td {
 <script id="main" type="text/x-handlebars-template">
 <blockquote>
   <p style="text-transform: uppercase;">API info</span></p>
-  <small>Base path: {{basePath}}</small>
+  <small>Base path: <%=basePath%></small>
   <small>Version: {{version}}</small>
 </blockquote>
 </script>
@@ -732,7 +738,7 @@ table td {
 									$('#testButton').button('loading');
 									
 									var res = $.ajax({
-										url : model.basePath + replacedPath,
+										url : "<%=basePath%>" + replacedPath,
 										type: method.verb,
 										data: $("#inputJson").val(),
 										headers: headers,

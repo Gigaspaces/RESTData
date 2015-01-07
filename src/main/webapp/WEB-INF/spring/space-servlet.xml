@@ -30,7 +30,6 @@
 
 	<bean id="documentationController" class="org.jsondoc.springmvc.controller.JSONDocController">
 		<property name="version" value="1.0" />
-		<property name="basePath" value="http://localhost:8888/" />
 		<property name="packages">
 			<list>
 				<value>org.openspaces.rest.space</value> <!-- put here packages in which you have your spring controllers -->
