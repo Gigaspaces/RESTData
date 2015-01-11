@@ -28,7 +28,10 @@ import com.gigaspaces.query.IdQuery;
 import com.j_spaces.core.UnknownTypeException;
 import com.j_spaces.core.client.SQLQuery;
 import net.jini.core.lease.Lease;
-import org.jsondoc.core.annotation.*;
+import org.jsondoc.core.annotation.Api;
+import org.jsondoc.core.annotation.ApiBodyObject;
+import org.jsondoc.core.annotation.ApiMethod;
+import org.jsondoc.core.annotation.ApiParam;
 import org.jsondoc.core.pojo.ApiParamType;
 import org.jsondoc.core.pojo.ApiVerb;
 import org.openspaces.core.GigaSpace;
@@ -36,14 +39,12 @@ import org.openspaces.core.space.CannotFindSpaceException;
 import org.openspaces.rest.exceptions.*;
 import org.openspaces.rest.utils.ControllerUtils;
 import org.openspaces.rest.utils.ErrorUtils;
-import org.openspaces.rest.utils.ReturnedObject;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.dao.DataAccessException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
-import org.springframework.web.servlet.ModelAndView;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -201,7 +202,6 @@ public class SpaceAPIController {
     @RequestMapping(value = "/{type}/_introduce_type", method = RequestMethod.PUT)
     public
     @ResponseBody
-    @ApiResponseObject
     Map<String, Object> introduceTypeAdvanced(
             @PathVariable @ApiParam(name = "type", description = TYPE_DESCRIPTION, paramType = ApiParamType.PATH)String type,
             @RequestBody(required = false) @ApiBodyObject String requestBody
@@ -529,7 +529,6 @@ public class SpaceAPIController {
     @RequestMapping(value = "/{type}", method = RequestMethod.GET)
     public
     @ResponseBody
-    @ApiResponseObject
     Map<String, Object> getByQuery(
             @PathVariable @ApiParam(name = "type", description = TYPE_DESCRIPTION, paramType = ApiParamType.PATH) String type,
             @RequestParam(value = QUERY_PARAM, required = false)
@@ -590,9 +589,8 @@ public class SpaceAPIController {
     @RequestMapping(value = "/{type}/{id}", method = RequestMethod.GET, produces = { MediaType.APPLICATION_JSON_VALUE })
     public
     @ResponseBody
-    @ApiResponseObject
-    ReturnedObject getById(
-            @PathVariable @ApiParam(name = "type", paramType = ApiParamType.PATH, description = TYPE_DESCRIPTION)String type,
+    Map<String, Object> getById(
+            @PathVariable @ApiParam(name = "type", paramType = ApiParamType.PATH, description = TYPE_DESCRIPTION) String type,
             @PathVariable @ApiParam(name = "id", paramType = ApiParamType.PATH) String id) throws ObjectNotFoundException {
         GigaSpace gigaSpace = ControllerUtils.xapCache.get();
         //read by id request
@@ -615,22 +613,14 @@ public class SpaceAPIController {
             Map<String, Object> result = new LinkedHashMap<String, Object>();
             result.put("status", "success");
             result.put("data", ControllerUtils.mapper.readValue(ControllerUtils.mapper.writeValueAsString(doc), LinkedHashMap.class));
-            //return result;
-            ReturnedObject obj = new ReturnedObject();
-            obj.setData(result.get("data"));
-            obj.setStatus((String)result.get("status"));
-            return obj;
+            return result;
         } catch (IOException e) {
             Map<String, Object> result = new HashMap<String, Object>();
             result.put("status", "error");
             Map<String, Object> error = new HashMap<String, Object>();
             error.put("message", ErrorUtils.escapeJSON(e.getMessage()));
             result.put("error", error);
-            ReturnedObject obj = new ReturnedObject();
-            obj.setData(result.get("error"));
-            obj.setStatus((String)result.get("status"));
-            return obj;
-            //eturn result;
+            return result;
         }
     }
 
@@ -645,7 +635,6 @@ public class SpaceAPIController {
     @RequestMapping(value = "/{type}/count", method = RequestMethod.GET)
     public
     @ResponseBody
-    @ApiResponseObject
     Map<String, Object> count(
             @ApiParam(name = "type", paramType = ApiParamType.PATH, description = TYPE_DESCRIPTION)
             @PathVariable String type) throws ObjectNotFoundException {
@@ -702,7 +691,6 @@ public class SpaceAPIController {
     @RequestMapping(value = "/{type}/{id}", method = RequestMethod.DELETE)
     public
     @ResponseBody
-    @ApiResponseObject
     Map<String, Object> deleteById(
             @ApiParam(name = "type", description = TYPE_DESCRIPTION, paramType = ApiParamType.PATH)
             @PathVariable String type,
@@ -755,7 +743,6 @@ public class SpaceAPIController {
     @RequestMapping(value = "/{type}", method = RequestMethod.DELETE)
     public
     @ResponseBody
-    @ApiResponseObject
     Map<String, Object> deleteByQuery(
             @ApiParam(name = "type", description = TYPE_DESCRIPTION, paramType = ApiParamType.PATH)
             @PathVariable String type,
@@ -811,7 +798,6 @@ public class SpaceAPIController {
     @RequestMapping(value = "/{type}", method = RequestMethod.POST)
     public
     @ResponseBody
-    @ApiResponseObject
     Map<String, Object> post(
             @ApiParam(name = "type", description = TYPE_DESCRIPTION, paramType = ApiParamType.PATH)
             @PathVariable String type,

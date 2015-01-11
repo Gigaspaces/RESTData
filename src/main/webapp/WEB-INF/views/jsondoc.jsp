@@ -168,7 +168,7 @@ table td {
 </script>
 
 <script id="objects" type="text/x-handlebars-template">
-<div class="panel panel-default">
+<div class="panel panel-default" style="display: none">
 	<div class="panel-heading">
 		<h3 class="panel-title">Objects</h3>
 	</div>
