@@ -15,4 +15,5 @@ public abstract class ErrorUtils {
     public static String escapeJSON(String str) {
         return str.replace('\n',' ').replace('\t',' ').replace('\r',' ');
     }
+
 }
