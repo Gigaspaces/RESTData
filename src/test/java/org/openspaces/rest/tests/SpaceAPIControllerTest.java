@@ -197,14 +197,12 @@ public class SpaceAPIControllerTest {
         assertEquals("success", result.get("status"));
         ArrayList<Map<String, Map<String, Object>>> resultData = (ArrayList<Map<String, Map<String, Object>>>) result.get("data");
         assertEquals(2, resultData.size());
-//        compareObjects(properties1, resultType[0]);
-//        compareObjects(properties2, resultType[1]);
 
         //test get by var1
         result = spaceAPIController.getByQuery("Product", "testvar1='value1'", Integer.MAX_VALUE);
         assertEquals("success", result.get("status"));
         resultData = (ArrayList<Map<String, Map<String, Object>>>) result.get("data");
-        
+
         assertEquals(1, resultData.size());
         compareObjects(properties1, resultData.get(0).get("properties"));
 
@@ -246,12 +244,12 @@ public class SpaceAPIControllerTest {
         result = spaceAPIController.getByQuery(pojoClassName, "id='1'", Integer.MAX_VALUE);
         assertEquals("success", result.get("status"));
         ArrayList<Map<String, Object>> resultDataPojo = (ArrayList<Map<String, Object>>) result.get("data");
-        comparePojoAndProps(pojo1, resultDataPojo.get(0));
+        compareObjects(pojo1, resultDataPojo.get(0));
 
         Map<String, Object> resultByID = spaceAPIController.getById(pojoClassName, "1");
         assertEquals("success", resultByID.get("status"));
         Map<String, Object> resultDataById = (Map<String, Object>) resultByID.get("data");
-        comparePojoAndProps(pojo1, resultDataById);
+        compareObjects(pojo1, resultDataById);
 
         resultByID = spaceAPIController.getById("Product", "doc1");
         assertEquals("success", resultByID.get("status"));
@@ -266,7 +264,7 @@ public class SpaceAPIControllerTest {
         resultByID = spaceAPIController.getById(Pojo2.class.getName(), "1");
         assertEquals("success", resultByID.get("status"));
         resultDataById = (Map<String, Object>) resultByID.get("data");
-        comparePojoAndProps(pojo2, resultDataById);
+        compareObjects(pojo2, resultDataById);
 
         Pojo3 pojo3 = new Pojo3();
         pojo3.setId(1F);
@@ -276,7 +274,7 @@ public class SpaceAPIControllerTest {
         resultByID = spaceAPIController.getById(Pojo3.class.getName(), "1");
         assertEquals("success", resultByID.get("status"));
         resultDataById = (Map<String, Object>) resultByID.get("data");
-        comparePojoAndProps(pojo3, resultDataById);
+        compareObjects(pojo3, resultDataById);
     }
 
     @Test
@@ -353,7 +351,7 @@ public class SpaceAPIControllerTest {
         resultById = spaceAPIController.deleteById(Pojo.class.getName(), "1");
         assertEquals("success", resultById.get("status"));
         Map<String, Object> resultDataByIdPojo = (Map<String, Object>) resultById.get("data");
-        comparePojoAndProps(pojo1, resultDataByIdPojo);
+        compareObjects(pojo1, resultDataByIdPojo);
         assertEquals(0, gigaSpace.count(null));
 
         gigaSpace.write(pojo1);
@@ -361,7 +359,7 @@ public class SpaceAPIControllerTest {
         result = spaceAPIController.deleteByQuery(Pojo.class.getName(), "id='1'", Integer.MAX_VALUE);
         assertEquals("success", result.get("status"));
         ArrayList<Map<String, Object>> resultDataPojos = (ArrayList<Map<String, Object>>) result.get("data");
-        comparePojoAndProps(pojo1, resultDataPojos.get(0));
+        compareObjects(pojo1, resultDataPojos.get(0));
         assertEquals(0, gigaSpace.count(null));
 
         //
@@ -451,7 +449,7 @@ public class SpaceAPIControllerTest {
         assertEquals("success", result.get("status"));
 
         SpaceDocument docresult = gigaSpace.readById(new IdQuery<SpaceDocument>(Pojo2.class.getName(), 1,QueryResultType.DOCUMENT));
-        comparePojoAndProps(pojo2, docresult.getProperties());
+        compareObjects(pojo2, docresult.getProperties());
 
         Pojo3 pojo3 = new Pojo3();
         gigaSpace.snapshot(pojo3);
@@ -463,7 +461,7 @@ public class SpaceAPIControllerTest {
         assertEquals("success", result.get("status"));
 
         SpaceDocument docresult2 = gigaSpace.readById(new IdQuery<SpaceDocument>(Pojo3.class.getName(), 1F,QueryResultType.DOCUMENT));
-        comparePojoAndProps(pojo3, docresult2.getProperties());
+        compareObjects(pojo3, docresult2.getProperties());
     }
 
     @Test
@@ -517,7 +515,7 @@ public class SpaceAPIControllerTest {
         assertEquals("success", result.get("status"));
 
         SpaceDocument docresult = gigaSpace.readById(new IdQuery<SpaceDocument>(Pojo2.class.getName(), 1,QueryResultType.DOCUMENT));
-        comparePojoAndProps(pojo2, docresult.getProperties());
+        compareObjects(pojo2, docresult.getProperties());
 
         Pojo3 pojo3 = new Pojo3();
         gigaSpace.snapshot(pojo3);
@@ -529,7 +527,7 @@ public class SpaceAPIControllerTest {
         assertEquals("success", result.get("status"));
 
         SpaceDocument docresult2 = gigaSpace.readById(new IdQuery<SpaceDocument>(Pojo3.class.getName(), 1F,QueryResultType.DOCUMENT));
-        comparePojoAndProps(pojo3, docresult2.getProperties());
+        compareObjects(pojo3, docresult2.getProperties());
     }
 
 
@@ -608,19 +606,6 @@ public class SpaceAPIControllerTest {
         spaceAPIController.deleteByQuery("IDontExist", "", 1);
     }
     
-    private static void comparePojoAndProps(IPojo pojo, Map<String, Object> resultMap){
-        try {
-            //assertEquals(ControllerUtils.mapper.writeValueAsString(pojo), ControllerUtils.mapper.writeValueAsString(resultMap));
-            assertEquals(ControllerUtils.mapper.readValue(ControllerUtils.mapper.writeValueAsString(pojo), LinkedHashMap.class), ControllerUtils.mapper.readValue(ControllerUtils.mapper.writeValueAsString(resultMap), LinkedHashMap.class));
-        } catch (java.io.IOException e) {
-            e.printStackTrace();
-            Assert.fail("Error with comparePojoAndProps: "+ e.getMessage());
-        }
-assertEquals(pojo.getId(), resultMap.get("id"));
-        assertEquals(pojo.getVal(), resultMap.get("val"));
-
-    }
-    
     private static void registerProductType(GigaSpace gigaspace) {
         // Create type descriptor:
         SpaceTypeDescriptor typeDescriptor = new SpaceTypeDescriptorBuilder("Product")
@@ -648,13 +633,4 @@ assertEquals(pojo.getId(), resultMap.get("id"));
             Assert.fail("Error with compareObjects: "+e.getMessage());
         }
     }
-
-    public static void main(String[] args)throws Exception{
-    	
-    	Admin admin=new AdminFactory().addLocator("192.168.137.1").discoverUnmanagedSpaces().useDaemonThreads(true).create();
-    	Spaces spaces=admin.getSpaces();
-    	spaces.waitFor("embeddedTestSpace");
-    	
-    }
-
 }

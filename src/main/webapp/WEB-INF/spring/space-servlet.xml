@@ -63,9 +63,7 @@
 		<property name="suffix" value=".jsp" />
 	</bean>
 
-	<!--<mvc:view-controller path="/" view-name="index" />-->
 	<mvc:view-controller path="/" view-name="jsondoc" />
-	<!--<mvc:view-controller path="/jsondoc" view-name="jsondoc.jsp" />-->
 	<mvc:resources location="/resources/" mapping="/resources/**" order="-1" />
 
 </beans>
