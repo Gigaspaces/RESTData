@@ -108,7 +108,7 @@ import java.util.logging.Logger;
  */
 @Controller
 @RequestMapping(value = "/*")
-@Api(name = "Space API", description = "Methods for managing cities")
+@Api(name = "Space API", description = "Methods for interacting with space")
 public class SpaceAPIController {
 
     private static final String TYPE_DESCRIPTION = "The type name";
