@@ -1,24 +1,27 @@
 <%@ page import="java.net.InetAddress" %>
 <%@ page language="java" pageEncoding="UTF-8" contentType="text/html;charset=utf-8" %>
 <%
-	String ip = InetAddress.getLoopbackAddress().getHostName();
+	String ip = request.getLocalAddr();//InetAddress.getLoopbackAddress().getHostName();
 	Integer port = request.getServerPort();
-	String basePath = "http://"+ip+":"+port;
+	String context = request.getContextPath();
+	String basePath = "http://"+ip+":"+port+context;
 %>
 <!DOCTYPE html>
 <html lang="en">
 <head>
+<title>XAP REST Doc</title>
 <meta charset="utf-8">
-<title>JSONDoc</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <meta name="description" content="">
 <meta name="author" content="">
-
 <script src="resources/js/jquery-1.11.1.min.js"></script>
 <script src="resources/js/bootstrap.min.js"></script>
 <script type="text/javascript" src="resources/js/handlebars-1.0.0.beta.6.js"></script>
 <script type="text/javascript" src="resources/js/jlinq.js"></script>
 <script type="text/javascript" src="resources/js/prettify.js"></script>
+	<link rel="icon"
+		  type="image/png"
+		  href="resources/favicon.ico">
 
 <!-- Le styles -->
 <link href="resources/css/bootstrap.min.css" rel="stylesheet">
@@ -47,6 +50,18 @@ body {
 .DELETE {
 	padding-top : 5px;
 	background-color: #B94A48;
+}
+.OPTIONS {
+	padding-top : 5px;
+	background-color: #6B5463;
+}
+.TRACE {
+	padding-top : 5px;
+	background-color: #8E6C6E;
+}
+.HEAD {
+	padding-top : 5px;
+	background-color: #AA9A66;
 }
 
 blockquote small:before {
@@ -91,6 +106,10 @@ ol.linenums li {
 table td {
 	word-wrap: break-word;
 }
+
+.border-radius-none {
+	border-radius: 0px;
+}
 </style>
 
 <!-- Le HTML5 shim, for IE6-8 support of HTML5 elements -->
@@ -113,7 +132,7 @@ table td {
     		</div>
     		<form class="navbar-form navbar-left col-md-8" role="search">
 				<div class="form-group">
-		        	<input id="jsondocfetch" type="text" class="form-control" style="width:350px" placeholder="Insert here the JSONDoc URL" value="http://<%=ip%>:<%=port%>/jsondoc" autocomplete="off">
+		        	<input id="jsondocfetch" type="text" class="form-control" style="width:350px" readonly value="http://<%=ip%>:<%=port%><%=context%>/jsondoc" autocomplete="off">
 		        </div>
 		        <button id="getDocButton" class="btn btn-default">Get documentation</button>
 		    </form>
@@ -222,10 +241,13 @@ table td {
 							</tr>
 						{{/if}}	
 					{{/if}}
+					
+					{{#if description}}
 					<tr>
 						<th>Description</th>
 						<td>{{description}}</td>
 					</tr>
+					{{/if}}
 
 					{{#if auth}}
 						<tr>
@@ -329,6 +351,12 @@ table td {
 								<td>Format: {{this.format}}</td>
 							</tr>
 							{{/if}}
+							{{#if this.defaultvalue}}
+							<tr>
+								<td></td>
+								<td>Default value: {{this.defaultvalue}}</td>
+							</tr>
+							{{/if}}
 						{{/each}}
 					{{/if}}
 					{{#if bodyobject}}
@@ -337,6 +365,14 @@ table td {
 						</tr>
 						<tr>
 							<td colspan=2><code>{{bodyobject.jsondocType.oneLineText}}</code></td>
+						</tr>
+					{{/if}}
+					{{#if responsestatuscode}}
+						<tr>
+							<th colspan=2>Response status code</th>
+						</tr>
+						<tr>
+							<td colspan=2><code>{{responsestatuscode}}</code></td>
 						</tr>
 					{{/if}}
 					{{#if response}}
@@ -613,6 +649,8 @@ table td {
 	function printResponse(data, res, url) {
 		if(res.responseXML != null) {
 			$("#response").text(formatXML(res.responseText));
+		} else if (res.responseJSON != null) {
+			$("#response").text(JSON.stringify(data.responseJSON, undefined, 2));
 		} else {
 			$("#response").text(JSON.stringify(data, undefined, 2));
 		}
@@ -708,6 +746,7 @@ table td {
 								$("#testContent").show();
 								
 								$("#produces input:first").attr("checked", "checked");
+								$("#consumes input:first").attr("checked", "checked");
 								
 								$("#testButton").click(function() {
 									var headers = new Object();

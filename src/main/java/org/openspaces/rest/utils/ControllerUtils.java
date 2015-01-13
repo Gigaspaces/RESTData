@@ -25,11 +25,14 @@ import com.j_spaces.core.UnknownTypeException;
 import org.openspaces.core.GigaSpace;
 import org.openspaces.core.GigaSpaceConfigurer;
 import org.openspaces.core.space.UrlSpaceConfigurer;
+import org.openspaces.rest.exceptions.RestException;
 import org.openspaces.rest.exceptions.TypeNotFoundException;
 import org.openspaces.rest.exceptions.UnsupportedTypeException;
 import org.springframework.http.converter.HttpMessageNotReadableException;
 
 import java.io.BufferedReader;
+import java.text.ParseException;
+import java.text.SimpleDateFormat;
 import java.util.*;
 import java.util.Map.Entry;
 import java.util.concurrent.atomic.AtomicReference;
@@ -44,16 +47,19 @@ import java.util.logging.Logger;
 public class ControllerUtils {
 	private static final Logger logger = Logger.getLogger(ControllerUtils.class.getName());
 	private static final TypeReference<HashMap<String, Object>[]> typeRef = new TypeReference<HashMap<String, Object>[]>() {};
-	public static final ObjectMapper mapper = new ObjectMapper();
 	public static final XapConnectionCache xapCache=new XapConnectionCache();
-
 	public static String spaceName;
+
 	public static String lookupLocators;
 	public static String lookupGroups;
-
 	public static Map<String, Class> javaPrimitives = new HashMap<String, Class>();
 
 	public static ArrayList<String> allowedFields;
+
+
+	public static String date_format;
+	public static SimpleDateFormat simpleDateFormat;
+	public static ObjectMapper mapper;
 
 	static {
 		//Java objects
@@ -72,29 +78,22 @@ public class ControllerUtils {
 
 		allowedFields = new ArrayList<String>(Arrays.asList("idProperty", "routingProperty", "fixedProperties", "compoundIndex", "fifoSupport", "blobStoreEnabled", "storageType", "supportsOptimisticLocking", "supportsDynamicProperties"));
 
-		mapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
 	}
 
-	public static SpaceDocument[] createSpaceDocuments(String type, BufferedReader reader, GigaSpace gigaSpace)
+	public static SpaceDocument[] createSpaceDocuments(String type, String body, GigaSpace gigaSpace)
 			throws TypeNotFoundException {
 		HashMap<String, Object>[] propertyMapArr;
 		try{
-			//get payload
-			StringBuilder sb = new StringBuilder();
-			String line = reader.readLine();
-			while (line != null) {
-				sb.append(line + "\n");
-				line = reader.readLine();
-			}
-			reader.close();
 			//if single json object convert it to array
-			String data = sb.toString();
-			if (!data.startsWith("[")){
+			String data = body;
+			if (!body.startsWith("[")){
+				StringBuilder sb = new StringBuilder(body);
 				sb.insert(0, "[");
 				sb.append("]");
+				data = sb.toString();
 			}
 			//convert to json
-			propertyMapArr = mapper.readValue(sb.toString(), typeRef);
+			propertyMapArr = mapper.readValue(data, typeRef);
 		} catch(Exception e){
 			throw new HttpMessageNotReadableException(e.getMessage(), e.getCause());
 		}
@@ -183,11 +182,11 @@ public class ControllerUtils {
 					}
 					convertedObj = spaceDocuments;
 				}else{
-					try {
+					//try {
 						convertedObj = convertPropertyToPrimitiveType(String.valueOf(oldPropValue), propDesc.getType(), propKey);
-					} catch (UnsupportedTypeException e) {
+					/*} catch (UnsupportedTypeException e) {
 						convertedObj = oldPropValue;
-					}
+					}*/
 				}
 				newPropertyMap.put(propKey, convertedObj);
 			}
@@ -222,6 +221,14 @@ public class ControllerUtils {
 
 		if (type.equals(String.class) || type.equals(Object.class))
 			return String.valueOf(object);
+
+		if (type.equals(java.util.Date.class)) {
+			try {
+				return simpleDateFormat.parse(object);
+			} catch (ParseException e) {
+				throw new RestException("Unable to parse date ["+object+"]. Make sure it matches the format: "+date_format);
+			}
+		}
 
 		//unknown type
 		throw new UnsupportedTypeException("Non primitive type when converting property ["+propKey+"]:" +type);

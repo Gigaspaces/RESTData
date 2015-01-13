@@ -1,20 +1,20 @@
 package org.openspaces.rest.tests;
-import java.io.BufferedReader;
-import java.io.StringReader;
-import java.net.InetAddress;
-import java.util.*;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.databind.SerializationFeature;
 import com.gigaspaces.annotation.pojo.FifoSupport;
+import com.gigaspaces.document.SpaceDocument;
 import com.gigaspaces.metadata.SpaceDocumentSupport;
+import com.gigaspaces.metadata.SpaceTypeDescriptor;
+import com.gigaspaces.metadata.SpaceTypeDescriptorBuilder;
 import com.gigaspaces.metadata.StorageType;
 import com.gigaspaces.metadata.index.SpaceIndexType;
+import com.gigaspaces.query.IdQuery;
+import com.gigaspaces.query.QueryResultType;
 import junit.framework.Assert;
 import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
-import org.openspaces.admin.Admin;
-import org.openspaces.admin.AdminFactory;
-import org.openspaces.admin.space.Spaces;
 import org.openspaces.core.GigaSpace;
 import org.openspaces.core.GigaSpaceConfigurer;
 import org.openspaces.core.space.UrlSpaceConfigurer;
@@ -26,13 +26,15 @@ import org.springframework.web.HttpMediaTypeNotAcceptableException;
 import org.springframework.web.bind.MissingServletRequestParameterException;
 import org.springframework.web.servlet.mvc.multiaction.NoSuchRequestHandlingMethodException;
 
-import com.gigaspaces.document.SpaceDocument;
-import com.gigaspaces.metadata.SpaceTypeDescriptor;
-import com.gigaspaces.metadata.SpaceTypeDescriptorBuilder;
-import com.gigaspaces.query.IdQuery;
-import com.gigaspaces.query.QueryResultType;
+import java.net.InetAddress;
+import java.text.SimpleDateFormat;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.LinkedHashMap;
+import java.util.Map;
 
-import static org.junit.Assert.*;
+import static org.junit.Assert.assertEquals;
+import static org.junit.Assert.fail;
 
 
 public class SpaceAPIControllerTest {
@@ -59,6 +61,13 @@ public class SpaceAPIControllerTest {
         spaceAPIController = new SpaceAPIController();
         ControllerUtils.spaceName = SPACENAME;
         ControllerUtils.lookupGroups = groups;
+
+        ControllerUtils.date_format = "yyyy-MM-dd HH:mm:ss";
+        ControllerUtils.simpleDateFormat = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
+        ControllerUtils.mapper = new ObjectMapper();
+        ControllerUtils.mapper.setDateFormat(ControllerUtils.simpleDateFormat);
+        ControllerUtils.mapper.configure(SerializationFeature.FAIL_ON_EMPTY_BEANS, false);
+
         gigaSpace = new GigaSpaceConfigurer(new UrlSpaceConfigurer("/./" + SPACENAME+"?groups="+groups)).gigaSpace();
         registerProductType(gigaSpace);
     }
@@ -72,7 +81,7 @@ public class SpaceAPIControllerTest {
     public void testInroduceType() throws Exception {
         String content = "[{\"CatalogNumber\":\"doc1\", \"Category\":\"Hardware\", \"Name\":\"Anvil1\", \"nested\": {\"nestedVar1\":\"nestedValue1\"}}, {\"CatalogNumber\":\"doc2\", \"Category\":\"Hardware\", \"Name\":\"Anvil2\"}]";
         try {
-            Map<String, Object> postResult = spaceAPIController.post("MyType", new BufferedReader(new StringReader(content)));
+            Map<String, Object> postResult = spaceAPIController.post("MyType", content);
             fail("Writing to the space without introducing the class should cause TypeNotFoundException and it didn't");
         } catch (TypeNotFoundException e) {
             //This is the right behavior
@@ -81,7 +90,7 @@ public class SpaceAPIControllerTest {
         assertEquals("success", introduceTypeResult.get("status"));
 
         try {
-            Map<String, Object> postResult = spaceAPIController.post("MyType", new BufferedReader(new StringReader(content)));
+            Map<String, Object> postResult = spaceAPIController.post("MyType", content);
             assertEquals("Excpecting to get status equals to success", "success", postResult.get("status"));
             // More tests for write are in testGet()
         } catch (TypeNotFoundException e) {
@@ -402,7 +411,7 @@ public class SpaceAPIControllerTest {
         //test writemultiple
         String content = "[{\"CatalogNumber\":\"doc1\", \"Category\":\"Hardware\", \"Name\":\"Anvil1\", \"nested\": {\"nestedVar1\":\"nestedValue1\"}}, {\"CatalogNumber\":\"doc2\", \"Category\":\"Hardware\", \"Name\":\"Anvil2\"}]";
 
-        Map<String, Object> postResult = spaceAPIController.post("Product", new BufferedReader(new StringReader(content)));
+        Map<String, Object> postResult = spaceAPIController.post("Product", content);
         assertEquals("success", postResult.get("status"));
 
         assertEquals(2, gigaSpace.count(null));
@@ -426,7 +435,7 @@ public class SpaceAPIControllerTest {
 
         content = "[{\"CatalogNumber\":\"doc1\", \"Category\":\"Hardware\", \"Name\":\"Anvil1new\", \"nested\": {\"nestedVar1\":\"nestedValue1new\"}}, {\"CatalogNumber\":\"doc2\", \"Category\":\"Hardware\", \"Name\":\"Anvil2new\"}]";
         try{
-            Map<String, Object> result = spaceAPIController.post("Product", new BufferedReader(new StringReader(content)));
+            Map<String, Object> result = spaceAPIController.post("Product", content);
             assertEquals("success", result.get("status"));
         }catch(Exception e){
             fail("An action should not cause an exception but it did");
@@ -445,7 +454,7 @@ public class SpaceAPIControllerTest {
         pojo2.setVal(123L);
 
         content = "[{\"id\":\"1\", \"val\":\"123\"}]";
-        Map<String, Object> result = spaceAPIController.post(Pojo2.class.getName(), new BufferedReader(new StringReader(content)));
+        Map<String, Object> result = spaceAPIController.post(Pojo2.class.getName(), content);
         assertEquals("success", result.get("status"));
 
         SpaceDocument docresult = gigaSpace.readById(new IdQuery<SpaceDocument>(Pojo2.class.getName(), 1,QueryResultType.DOCUMENT));
@@ -457,7 +466,7 @@ public class SpaceAPIControllerTest {
         pojo3.setVal(123L);
 
         content = "[{\"id\":\"1\", \"val\":\"123\"}]";
-        result = spaceAPIController.post(Pojo3.class.getName(),new  BufferedReader(new StringReader(content)));
+        result = spaceAPIController.post(Pojo3.class.getName(), content);
         assertEquals("success", result.get("status"));
 
         SpaceDocument docresult2 = gigaSpace.readById(new IdQuery<SpaceDocument>(Pojo3.class.getName(), 1F,QueryResultType.DOCUMENT));
@@ -481,7 +490,7 @@ public class SpaceAPIControllerTest {
 
         String content = "[{\"CatalogNumber\":\"doc1\", \"Category\":\"Hardware\", \"Name\":\"Anvil1\", \"nested\": {\"nestedVar1\":\"nestedValue1\"}}, {\"CatalogNumber\":\"doc2\", \"Category\":\"Hardware\", \"Name\":\"Anvil2\"}]";
 
-        Map<String, Object> result = spaceAPIController.post("Product", new BufferedReader(new StringReader(content)));
+        Map<String, Object> result = spaceAPIController.post("Product", content);
         assertEquals("success", result.get("status"));
 
         assertEquals(2, gigaSpace.count(null));
@@ -494,7 +503,7 @@ public class SpaceAPIControllerTest {
         properties2.put("Name", "Anvil2new");
 
         content = "[{\"CatalogNumber\":\"doc1\", \"Category\":\"Hardware\", \"Name\":\"Anvil1new\", \"nested\": {\"nestedVar1\":\"nestedValue1new\"}}, {\"CatalogNumber\":\"doc2\", \"Category\":\"Hardware\", \"Name\":\"Anvil2new\"}]";
-        result = spaceAPIController.post("Product", new BufferedReader(new StringReader(content)));
+        result = spaceAPIController.post("Product", content);
         assertEquals("success", result.get("status"));
 
         assertEquals(2, gigaSpace.count(null));
@@ -511,7 +520,7 @@ public class SpaceAPIControllerTest {
         pojo2.setVal(123L);
 
         content = "[{\"id\":\"1\", \"val\":\"123\"}]";
-        result = spaceAPIController.post(Pojo2.class.getName(), new BufferedReader(new StringReader(content)));
+        result = spaceAPIController.post(Pojo2.class.getName(), content);
         assertEquals("success", result.get("status"));
 
         SpaceDocument docresult = gigaSpace.readById(new IdQuery<SpaceDocument>(Pojo2.class.getName(), 1,QueryResultType.DOCUMENT));
@@ -523,7 +532,7 @@ public class SpaceAPIControllerTest {
         pojo3.setVal(123L);
 
         content = "[{\"id\":\"1\", \"val\":\"123\"}]";
-        result = spaceAPIController.post(Pojo3.class.getName(), new BufferedReader(new StringReader(content)));
+        result = spaceAPIController.post(Pojo3.class.getName(), content);
         assertEquals("success", result.get("status"));
 
         SpaceDocument docresult2 = gigaSpace.readById(new IdQuery<SpaceDocument>(Pojo3.class.getName(), 1F,QueryResultType.DOCUMENT));
@@ -546,8 +555,7 @@ public class SpaceAPIControllerTest {
             .setProperty("Job", Job.FARMER);
         gigaSpace.write(document2);
 
-        BufferedReader reader = new BufferedReader(new StringReader("{\"ID\":\"333\", \"Job\":\"WORKER\"}"));
-        Map<String, Object> postResult = spaceAPIController.post("Person", reader);
+        Map<String, Object> postResult = spaceAPIController.post("Person", "{\"ID\":\"333\", \"Job\":\"WORKER\"}");
         assertEquals("success", postResult.get("status"));
 
         Map<String, Object> result = spaceAPIController.getByQuery("Person", "Job='DOCTOR'", Integer.MAX_VALUE);
@@ -567,13 +575,13 @@ public class SpaceAPIControllerTest {
     @Test(expected=TypeNotFoundException.class) 
     public void testTypeNotRegisteredOnPut() throws Exception {
         String content = "[{\"id\":\"1\", \"val\":\"123\"}]";
-        spaceAPIController.post(UnregisteredPojo.class.getName(), new BufferedReader(new StringReader(content)));
+        spaceAPIController.post(UnregisteredPojo.class.getName(), content);
     }
 
     @Test(expected=TypeNotFoundException.class) 
     public void testTypeNotRegisteredOnPost() throws Exception {
         String content = "[{\"id\":\"1\", \"val\":\"123\"}]";
-        spaceAPIController.post(UnregisteredPojo.class.getName(), new  BufferedReader(new StringReader(content)));
+        spaceAPIController.post(UnregisteredPojo.class.getName(), content);
     }
     
     @Test(expected=TypeNotFoundException.class) 

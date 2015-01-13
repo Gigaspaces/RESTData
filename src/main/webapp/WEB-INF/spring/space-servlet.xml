@@ -20,6 +20,7 @@
 				<prop key="spaceName">#{(servletContext.getInitParameter("spaceName") == null ? "" : servletContext.getInitParameter("spaceName"))}</prop>
 				<prop key="lookupLocators">#{(servletContext.getInitParameter("lookupLocators") == null ? "" : servletContext.getInitParameter("lookupLocators"))}</prop>
 				<prop key="lookupGroups">#{(servletContext.getInitParameter("lookupGroups") == null ? "" : servletContext.getInitParameter("lookupGroups"))}</prop>
+				<prop key="datetime_format">#{(servletContext.getInitParameter("datetime_format") == null ? "yyyy-MM-dd HH:mm:ss" : servletContext.getInitParameter("datetime_format"))}</prop>
 			</props>
 		</property>
 	</bean>
@@ -64,6 +65,7 @@
 	</bean>
 
 	<mvc:view-controller path="/" view-name="jsondoc" />
+	<mvc:view-controller path="/favicon" view-name="favicon" />
 	<mvc:resources location="/resources/" mapping="/resources/**" order="-1" />
 
 </beans>

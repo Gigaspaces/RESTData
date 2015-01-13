@@ -1,7 +1,8 @@
 package org.openspaces.rest.exceptions;
 
 /**
- * Created by yohana on 12/31/14.
+ * @author yohana
+ * @since 10.1.0
  */
 public class TypeAlreadyRegisteredException extends RuntimeException {
     private static final long serialVersionUID = 1L;
