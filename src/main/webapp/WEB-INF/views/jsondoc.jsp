@@ -479,7 +479,7 @@ table td {
 			{{#pathparameters}}
 				<div class="form-group">
 					<label for="i_{{name}}">{{name}}</label>
-					<input type="text" class="form-control" id="i_{{name}}" name="{{name}}" placeholder="{{name}}">
+					<input type="text" class="form-control" id="i_{{name}}" name="{{name}}" placeholder="{{name}}" required="{{required}}">
 				</div>
 			{{/pathparameters}}
 		</div>
@@ -749,6 +749,7 @@ table td {
 								$("#consumes input:first").attr("checked", "checked");
 								
 								$("#testButton").click(function() {
+									var errorMessage = null;
 									var headers = new Object();
 									$("#headers input").each(function() {
 										headers[this.name] = $(this).val();
@@ -765,6 +766,11 @@ table td {
 									var replacedPath = method.path;
 									var tempReplacedPath = replacedPath; // this is to handle more than one parameter on the url
 									$("#pathparameters input").each(function() {
+										if (this.getAttribute("required") == "true") {
+											if (this.value.length == 0) {
+												errorMessage = "Please fill the required field: "+this.name;
+											}
+										}
 										tempReplacedPath = replacedPath.replace("{"+this.name+"}", $(this).val());
 										replacedPath = tempReplacedPath;
 									});
@@ -773,23 +779,26 @@ table td {
 										tempReplacedPath = replacedPath.replace("{"+this.name+"}", $(this).val());
 										replacedPath = tempReplacedPath;
 									});
-									
-									$('#testButton').button('loading');
-									
-									var res = $.ajax({
-										url : "<%=basePath%>" + replacedPath,
-										type: method.verb,
-										data: $("#inputJson").val(),
-										headers: headers,
-										contentType: $("#consumes input:checked").val(),
-										success : function(data) {
-											printResponse(data, res, this.url);
-										},
-										error: function(data) {
-											printResponse(data, res, this.url);
-										}
-									});
-									
+
+									if (errorMessage != null) {
+										alert(errorMessage);
+									} else {
+										$('#testButton').button('loading');
+
+										var res = $.ajax({
+											url : "<%=basePath%>" + replacedPath,
+											type: method.verb,
+											data: $("#inputJson").val(),
+											headers: headers,
+											contentType: $("#consumes input:checked").val(),
+											success : function(data) {
+												printResponse(data, res, this.url);
+											},
+											error: function(data) {
+												printResponse(data, res, this.url);
+											}
+										});
+									}
 								});
 								
 							});
