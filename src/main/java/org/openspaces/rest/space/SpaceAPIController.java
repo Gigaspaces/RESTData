@@ -156,7 +156,7 @@ public class SpaceAPIController {
      * @return
      */
     @RequestMapping(value = "/{type}/_introduce_type", method = RequestMethod.GET
-            , consumes = {MediaType.APPLICATION_JSON_VALUE}, produces = {MediaType.APPLICATION_JSON_VALUE})
+            ,produces = {MediaType.APPLICATION_JSON_VALUE})
     public
     @ResponseBody
     Map<String, Object> introduceType(
@@ -526,7 +526,7 @@ public class SpaceAPIController {
             @RequestParam(value = QUERY_PARAM, required = false)
             @ApiParam(name = "query", description = "a SQLQuery that is a SQL-like syntax", paramType = ApiParamType.QUERY) String query,
             @RequestParam(value = MAX_PARAM, required = false)
-            @ApiParam(name = "size", clazz = Integer.class, description = "", paramType = ApiParamType.QUERY) Integer size) throws ObjectNotFoundException {
+            @ApiParam(name = "size", description = "", paramType = ApiParamType.QUERY) Integer size) throws ObjectNotFoundException {
         if (logger.isLoggable(Level.FINE))
             logger.fine("creating read query with type: " + type + " and query: " + query);
 
@@ -608,11 +608,10 @@ public class SpaceAPIController {
     @ApiMethod(
             path = "/{type}/count",
             verb = ApiVerb.GET,
-            description = "Returns the number of entries in space of the specified type\n"
-            , consumes = {MediaType.APPLICATION_JSON_VALUE}, produces = {MediaType.APPLICATION_JSON_VALUE}
+            description = "Returns the number of entries in space of the specified type\n", produces = {MediaType.APPLICATION_JSON_VALUE}
     )
     @RequestMapping(value = "/{type}/count", method = RequestMethod.GET
-            , consumes = {MediaType.APPLICATION_JSON_VALUE}, produces = {MediaType.APPLICATION_JSON_VALUE})
+            , produces = {MediaType.APPLICATION_JSON_VALUE})
     public
     @ResponseBody
     Map<String, Object> count(
@@ -667,10 +666,10 @@ public class SpaceAPIController {
             path = "/{type}/{id}",
             verb = ApiVerb.DELETE,
             description = "Gets and deletes the entry from space with the provided id."
-            , consumes = {MediaType.APPLICATION_JSON_VALUE}, produces = {MediaType.APPLICATION_JSON_VALUE}
+            ,produces = {MediaType.APPLICATION_JSON_VALUE}
     )
     @RequestMapping(value = "/{type}/{id}", method = RequestMethod.DELETE
-            , consumes = {MediaType.APPLICATION_JSON_VALUE}, produces = {MediaType.APPLICATION_JSON_VALUE})
+            ,produces = {MediaType.APPLICATION_JSON_VALUE})
     public
     @ResponseBody
     Map<String, Object> deleteById(
@@ -716,10 +715,10 @@ public class SpaceAPIController {
             path = "/{type}/",
             verb = ApiVerb.DELETE,
             description = "Gets and deletes entries from space that matches the query."
-            , consumes = {MediaType.APPLICATION_JSON_VALUE}, produces = {MediaType.APPLICATION_JSON_VALUE}
+            ,produces = {MediaType.APPLICATION_JSON_VALUE}
     )
     @RequestMapping(value = "/{type}", method = RequestMethod.DELETE
-            , consumes = {MediaType.APPLICATION_JSON_VALUE}, produces = {MediaType.APPLICATION_JSON_VALUE})
+            ,produces = {MediaType.APPLICATION_JSON_VALUE})
     public
     @ResponseBody
     Map<String, Object> deleteByQuery(
