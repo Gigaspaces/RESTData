@@ -1,5 +1,4 @@
-[![Build Status](https://secure.travis-ci.org/OpenSpaces/RESTData.png)](http://travis-ci.org/OpenSpaces/RESTData)
-
+[![Build Status](https://travis-ci.org/Gigaspaces/RESTData.svg?branch=master)](https://travis-ci.org/Gigaspaces/RESTData)
 
 <h2>Documentation</h2>
 
