@@ -29,11 +29,7 @@ import com.gigaspaces.query.IdQuery;
 import com.j_spaces.core.UnknownTypeException;
 import com.j_spaces.core.client.SQLQuery;
 import net.jini.core.lease.Lease;
-import org.jsondoc.core.annotation.Api;
-import org.jsondoc.core.annotation.ApiBodyObject;
-import org.jsondoc.core.annotation.ApiMethod;
-import org.jsondoc.core.annotation.ApiParam;
-import org.jsondoc.core.pojo.ApiParamType;
+import org.jsondoc.core.annotation.*;
 import org.jsondoc.core.pojo.ApiVerb;
 import org.openspaces.core.GigaSpace;
 import org.openspaces.core.space.CannotFindSpaceException;
@@ -109,7 +105,6 @@ import java.util.logging.Logger;
  * @since 8.0
  */
 @Controller
-@RequestMapping(value = "/*")
 @Api(name = "Space API", description = "Methods for interacting with space")
 public class SpaceAPIController {
 
@@ -193,7 +188,7 @@ public class SpaceAPIController {
     }
 
     @ApiMethod(
-            path = "/{type}/_introduce_type",
+            path = "{type}/_introduce_type",
             verb = ApiVerb.PUT
             , description = "Introduces the specified type to the space with the provided description in the body"
             , consumes = {MediaType.APPLICATION_JSON_VALUE}, produces = {MediaType.APPLICATION_JSON_VALUE}
@@ -204,7 +199,7 @@ public class SpaceAPIController {
     public
     @ResponseBody
     Map<String, Object> introduceTypeAdvanced(
-            @PathVariable @ApiParam(name = "type", description = TYPE_DESCRIPTION, paramType = ApiParamType.PATH) String type,
+            @PathVariable @ApiPathParam(name = "type", description = TYPE_DESCRIPTION) String type,
             @RequestBody(required = false) @ApiBodyObject String requestBody
     ) {
         if (logger.isLoggable(Level.FINE))
@@ -513,7 +508,7 @@ public class SpaceAPIController {
      * @throws ObjectNotFoundException
      */
     @ApiMethod(
-            path = "/{type}/",
+            path = "{type}/",
             verb = ApiVerb.GET,
             description = "Read multiple entries from space that matches the query."
             , produces = {MediaType.APPLICATION_JSON_VALUE}
@@ -522,11 +517,11 @@ public class SpaceAPIController {
     public
     @ResponseBody
     Map<String, Object> getByQuery(
-            @PathVariable() @ApiParam(name = "type", description = TYPE_DESCRIPTION, paramType = ApiParamType.PATH) String type,
+            @PathVariable() @ApiPathParam(name = "type", description = TYPE_DESCRIPTION) String type,
             @RequestParam(value = QUERY_PARAM, required = false)
-            @ApiParam(name = "query", description = "a SQLQuery that is a SQL-like syntax", paramType = ApiParamType.QUERY) String query,
+            @ApiQueryParam(name = "query", description = "a SQLQuery that is a SQL-like syntax") String query,
             @RequestParam(value = MAX_PARAM, required = false)
-            @ApiParam(name = "size", description = "", paramType = ApiParamType.QUERY) Integer size) throws ObjectNotFoundException {
+            @ApiQueryParam(name = "size", description = "") Integer size) throws ObjectNotFoundException {
         if (logger.isLoggable(Level.FINE))
             logger.fine("creating read query with type: " + type + " and query: " + query);
 
@@ -564,7 +559,7 @@ public class SpaceAPIController {
      * @throws UnknownTypeException
      */
     @ApiMethod(
-            path = "/{type}/{id}",
+            path = "{type}/{id}",
             verb = ApiVerb.GET,
             description = "Read entry from space with the provided id"
             , produces = {MediaType.APPLICATION_JSON_VALUE}
@@ -573,8 +568,8 @@ public class SpaceAPIController {
     public
     @ResponseBody
     Map<String, Object> getById(
-            @PathVariable @ApiParam(name = "type", paramType = ApiParamType.PATH, description = TYPE_DESCRIPTION) String type,
-            @PathVariable @ApiParam(name = "id", paramType = ApiParamType.PATH) String id) throws ObjectNotFoundException {
+            @PathVariable @ApiPathParam(name = "type", description = TYPE_DESCRIPTION) String type,
+            @PathVariable @ApiPathParam(name = "id") String id) throws ObjectNotFoundException {
         GigaSpace gigaSpace = ControllerUtils.xapCache.get();
         //read by id request
         Object typedBasedId = getTypeBasedIdObject(gigaSpace, type, id);
@@ -606,7 +601,7 @@ public class SpaceAPIController {
      * REST COUNT request handler
      */
     @ApiMethod(
-            path = "/{type}/count",
+            path = "{type}/count",
             verb = ApiVerb.GET,
             description = "Returns the number of entries in space of the specified type\n", produces = {MediaType.APPLICATION_JSON_VALUE}
     )
@@ -615,7 +610,7 @@ public class SpaceAPIController {
     public
     @ResponseBody
     Map<String, Object> count(
-            @ApiParam(name = "type", paramType = ApiParamType.PATH, description = TYPE_DESCRIPTION)
+            @ApiPathParam(name = "type", description = TYPE_DESCRIPTION)
             @PathVariable String type) throws ObjectNotFoundException {
 
         GigaSpace gigaSpace = ControllerUtils.xapCache.get();
@@ -663,7 +658,7 @@ public class SpaceAPIController {
      * @throws ObjectNotFoundException
      */
     @ApiMethod(
-            path = "/{type}/{id}",
+            path = "{type}/{id}",
             verb = ApiVerb.DELETE,
             description = "Gets and deletes the entry from space with the provided id."
             ,produces = {MediaType.APPLICATION_JSON_VALUE}
@@ -673,9 +668,9 @@ public class SpaceAPIController {
     public
     @ResponseBody
     Map<String, Object> deleteById(
-            @ApiParam(name = "type", description = TYPE_DESCRIPTION, paramType = ApiParamType.PATH)
+            @ApiPathParam(name = "type", description = TYPE_DESCRIPTION)
             @PathVariable String type,
-            @ApiParam(name = "id", paramType = ApiParamType.PATH)
+            @ApiPathParam(name = "id")
             @PathVariable String id) throws ObjectNotFoundException {
 
         GigaSpace gigaSpace = ControllerUtils.xapCache.get();
@@ -712,7 +707,7 @@ public class SpaceAPIController {
      * @return
      */
     @ApiMethod(
-            path = "/{type}/",
+            path = "{type}/",
             verb = ApiVerb.DELETE,
             description = "Gets and deletes entries from space that matches the query."
             ,produces = {MediaType.APPLICATION_JSON_VALUE}
@@ -722,11 +717,11 @@ public class SpaceAPIController {
     public
     @ResponseBody
     Map<String, Object> deleteByQuery(
-            @ApiParam(name = "type", description = TYPE_DESCRIPTION, paramType = ApiParamType.PATH)
+            @ApiPathParam(name = "type", description = TYPE_DESCRIPTION)
             @PathVariable String type,
-            @ApiParam(name = "query", paramType = ApiParamType.QUERY)
+            @ApiQueryParam(name = "query")
             @RequestParam(value = QUERY_PARAM) String query,
-            @ApiParam(name = "max", description = "The maximum number of entries to return. Default is Integer.MAX_VALUE", paramType = ApiParamType.QUERY)
+            @ApiQueryParam(name = "max", description = "The maximum number of entries to return. Default is Integer.MAX_VALUE")
             @RequestParam(value = MAX_PARAM, required = false) Integer max) {
         if (logger.isLoggable(Level.FINE))
             logger.fine("creating take query with type: " + type + " and query: " + query);
@@ -763,7 +758,7 @@ public class SpaceAPIController {
      * @throws TypeNotFoundException
      */
     @ApiMethod(
-            path = "/{type}/",
+            path = "{type}/",
             verb = ApiVerb.POST,
             description = "Write one or more entries to the space."
             , consumes = {MediaType.APPLICATION_JSON_VALUE}, produces = {MediaType.APPLICATION_JSON_VALUE}
@@ -773,7 +768,7 @@ public class SpaceAPIController {
     public
     @ResponseBody
     Map<String, Object> post(
-            @ApiParam(name = "type", description = TYPE_DESCRIPTION, paramType = ApiParamType.PATH)
+            @ApiPathParam(name = "type", description = TYPE_DESCRIPTION)
             @PathVariable String type,
             @RequestBody(required = false)
             @ApiBodyObject(clazz = ErrorMessage.class)
