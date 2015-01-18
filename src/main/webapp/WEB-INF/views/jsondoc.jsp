@@ -662,7 +662,7 @@ table td {
 		if(res.responseXML != null) {
 			$("#response").text(formatXML(res.responseText));
 		} else if (res.responseJSON != null) {
-			$("#response").text(JSON.stringify(data.responseJSON, undefined, 2));
+			$("#response").text(JSON.stringify(res.responseJSON, undefined, 2));
 		} else {
 			$("#response").text(JSON.stringify(data, undefined, 2));
 		}
@@ -816,7 +816,7 @@ table td {
 									$('#testButton').button('loading');
 
 									var res = $.ajax({
-											url : "<%=basePath%>" + replacedPath,
+										url : "<%=basePath%>" + replacedPath,
 										type: method.verb,
 										data: $("#inputJson").val(),
 										headers: headers,
