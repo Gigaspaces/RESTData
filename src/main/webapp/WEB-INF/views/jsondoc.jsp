@@ -1,10 +1,9 @@
-<%@ page import="java.net.InetAddress" %>
 <%@ page language="java" pageEncoding="UTF-8" contentType="text/html;charset=utf-8" %>
 <%
-	String ip = request.getLocalAddr();//InetAddress.getLoopbackAddress().getHostName();
+	String address=request.getServerName();
 	Integer port = request.getServerPort();
 	String context = request.getContextPath();
-	String basePath = "http://"+ip+":"+port+context;
+	String basePath = "http://"+address+":"+port+context;
 %>
 <!DOCTYPE html>
 <html lang="en">
@@ -132,7 +131,7 @@ table td {
 		</div>
 		<form class="navbar-form navbar-left col-md-8" role="search">
 			<div class="form-group">
-		        	<input id="jsondocfetch" type="text" class="form-control" style="width:350px" readonly value="http://<%=ip%>:<%=port%><%=context%>/jsondoc" autocomplete="off">
+		        	<input id="jsondocfetch" type="text" class="form-control" style="width:350px" readonly value="http://<%=basePath%>/jsondoc" autocomplete="off">
 			</div>
 			<button id="getDocButton" class="btn btn-default">Get documentation</button>
 		</form>
