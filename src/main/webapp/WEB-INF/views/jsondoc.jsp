@@ -131,7 +131,7 @@ table td {
 		</div>
 		<form class="navbar-form navbar-left col-md-8" role="search">
 			<div class="form-group">
-		        	<input id="jsondocfetch" type="text" class="form-control" style="width:350px" readonly value="http://<%=basePath%>/jsondoc" autocomplete="off">
+		        	<input id="jsondocfetch" type="text" class="form-control" style="width:350px" readonly value="<%=basePath%>/jsondoc" autocomplete="off">
 			</div>
 			<button id="getDocButton" class="btn btn-default">Get documentation</button>
 		</form>
