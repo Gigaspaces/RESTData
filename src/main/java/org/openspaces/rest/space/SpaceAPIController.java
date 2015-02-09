@@ -147,9 +147,11 @@ public class SpaceAPIController {
     /**
      * REST GET for introducing type to space
      *
+     * @deprecated Use {@link #introduceTypeAdvanced(String, String)} instead
      * @param type type name
      * @return
      */
+    @Deprecated
     @RequestMapping(value = "/{type}/_introduce_type", method = RequestMethod.GET
             ,produces = {MediaType.APPLICATION_JSON_VALUE})
     public
