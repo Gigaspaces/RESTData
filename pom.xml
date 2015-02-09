@@ -6,6 +6,12 @@
     <packaging>war</packaging>
     <version>10.1.0-SNAPSHOT</version>
     <name>RESTData</name>
+    <repositories>
+        <repository>
+            <id>org.openspaces</id>
+            <url>http://maven-repository.openspaces.org</url>
+        </repository>
+    </repositories>
     <properties>
         <spring-version>4.1.1.RELEASE</spring-version>
         <gsVersion>10.1.0-SNAPSHOT</gsVersion>
