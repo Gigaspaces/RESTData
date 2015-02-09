@@ -79,6 +79,10 @@
                     <groupId>asm</groupId>
                     <artifactId>asm-common</artifactId>
                 </exclusion>
+                <exclusion>
+                    <artifactId>xap-jms</artifactId>
+                    <groupId>com.gigaspaces</groupId>
+                </exclusion>
             </exclusions>
         </dependency>
         <dependency>
@@ -239,6 +243,10 @@
                         <exclusion>
                             <groupId>asm</groupId>
                             <artifactId>asm-common</artifactId>
+                        </exclusion>
+                        <exclusion>
+                            <artifactId>xap-jms</artifactId>
+                            <groupId>com.gigaspaces</groupId>
                         </exclusion>
                     </exclusions>
                 </dependency>
