@@ -4,7 +4,7 @@
     <groupId>org.openspaces</groupId>
     <artifactId>RESTData</artifactId>
     <packaging>war</packaging>
-    <version>10.2.0-SNAPSHOT</version>
+    <version>11.0.0-SNAPSHOT</version>
     <name>RESTData</name>
     <repositories>
         <repository>
@@ -14,7 +14,7 @@
     </repositories>
     <properties>
         <spring-version>4.1.1.RELEASE</spring-version>
-        <gsVersion>10.2.0-SNAPSHOT</gsVersion>
+        <gsVersion>11.0.0-SNAPSHOT</gsVersion>
         <exclude.tests>nothing-to-exclude</exclude.tests>
         <jsondoc-version>1.1.1</jsondoc-version>
     </properties>
