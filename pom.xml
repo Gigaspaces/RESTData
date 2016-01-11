@@ -4,7 +4,7 @@
     <groupId>RESTData</groupId>
     <artifactId>RESTData</artifactId>
     <packaging>war</packaging>
-    <version>10.0.1-11800-RELEASE</version>
+    <version>10.0.1-11850-RELEASE</version>
     <name>RESTData</name>
     <repositories>
         <repository>
