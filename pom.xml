@@ -4,7 +4,7 @@
     <groupId>org.openspaces</groupId>
     <artifactId>RESTData</artifactId>
     <packaging>war</packaging>
-    <version>11.0.0-14800-RELEASE</version>
+    <version>11.0.0-14857-RELEASE</version>
     <name>RESTData</name>
     <repositories>
         <repository>
